@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 const API_KEY = process.env.CONDUCERE_API_KEY;
 app.use((req, res, next) => {
     if (req.header('X-API-KEY') !== API_KEY) {
-        return res.status(401).send('Unauthorized');
+        return res.status(401).json({ error: 'Unauthorized' });
     }
     next();
 });
@@ -27,7 +27,7 @@ const db = admin.database();
 
 // -------------------- Rute API --------------------
 
-// Users
+// Get all users
 app.get('/api/users', async (req, res) => {
     try {
         const snapshot = await db.ref('Users').once('value');
@@ -37,6 +37,17 @@ app.get('/api/users', async (req, res) => {
     }
 });
 
+// Get single user by username
+app.get('/api/users/:username', async (req, res) => {
+    try {
+        const snapshot = await db.ref(`Users/${req.params.username}`).once('value');
+        res.json(snapshot.val() || null);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Create new user
 app.post('/api/users', async (req, res) => {
     try {
         const { username, passwordHash, grad } = req.body;
@@ -139,4 +150,4 @@ app.get('/api/statistici', async (req, res) => {
 
 // Pornire server
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`API running on ${port}`));
+app.listen(port, () => console.log(`API running on port ${port}`));
