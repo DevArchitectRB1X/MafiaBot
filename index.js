@@ -69,7 +69,7 @@ app.get('/api/jucatoriacc', async (req, res) => {
 });
 
 // Jucatori
-app.get('/api/jucatori', async (req, res) => {
+app.get('/api/membrifactiune', async (req, res) => {
     try {
         const snapshot = await db.ref('membrifactiune').once('value');
         res.json(snapshot.val());
@@ -99,7 +99,7 @@ app.get('/api/invoire/:discordId', async (req, res) => {
 });
 
 // Schimba rank
-app.post('/api/jucatori/:id/rank', async (req, res) => {
+app.post('/api/membrifactiune/:id/rank', async (req, res) => {
     try {
         const { rankNou } = req.body;
         await db.ref(`membrifactiune/${req.params.id}/rank`).set(rankNou);
