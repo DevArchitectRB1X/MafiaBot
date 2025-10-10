@@ -148,6 +148,16 @@ app.get('/api/statistici', async (req, res) => {
     }
 });
 
+app.get("/api/stuff/version", async (req, res) => {
+    try {
+        const snapshot = await db.ref("stuff/version").once("value");
+        res.json(snapshot.val());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // Pornire server
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`API running on port ${port}`));
