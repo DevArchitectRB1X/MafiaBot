@@ -150,12 +150,14 @@ app.get('/api/statistici', async (req, res) => {
 
 app.get("/api/stuff/version", async (req, res) => {
     try {
-        const snapshot = await db.ref("stuff/version").once("value");
-        res.json(snapshot.val());
+        // Citește nodul 'stuff/Version' din Firebase
+        const snapshot = await db.ref("stuff/Version").once("value");
+        res.json(snapshot.val()); // va returna "1.0.0"
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 
 // Pornire server
