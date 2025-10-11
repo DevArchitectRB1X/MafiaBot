@@ -58,6 +58,30 @@ app.post('/api/users', async (req, res) => {
     }
 });
 
+// ====================== ABSENTI ======================
+app.post('/api/absenti', async (req, res) => {
+    try {
+        const { Id, Nume, DataStart, DataExpira } = req.body;
+
+        if (!Id || !Nume) {
+            return res.status(400).json({ error: 'Lipsesc campuri obligatorii' });
+        }
+
+        await db.ref(`absenti/${Id}`).set({
+            Id,
+            Nume,
+            DataStart,
+            DataExpira
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[ERROR] POST /api/absenti:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // JucatoriAcc
 app.get('/api/jucatoriacc', async (req, res) => {
     try {
