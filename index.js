@@ -17,6 +17,7 @@ app.use((req, res, next) => {
 
 // -------------------- Middleware pentru FACTION_ID (Nou) --------------------
 // Preluăm ID-ul facțiunii din header-ul X-FACTION-ID trimis de clientul C#
+/*
 app.use((req, res, next) => {
     const factionId = req.header('X-FACTION-ID');
     if (!factionId) {
@@ -26,7 +27,7 @@ app.use((req, res, next) => {
     req.factionId = factionId; 
     next();
 });
-
+*/
 // -------------------- Firebase Admin Setup --------------------
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
