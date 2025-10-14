@@ -57,7 +57,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 // Get single user by username
-app.get('/api/users/:username', async (req, res) => {
+app.get('/api/Users/:username', async (req, res) => {
     try {
         const path = getRefPath(req, `Users/${req.params.username}`);
         const snapshot = await db.ref(path).once('value');
@@ -190,13 +190,17 @@ app.get('/api/invoirems/:discordId', async (req, res) => {
 // Codurile sunt la ROOT (nu sub FACTION_ID), conform structurii tale
 app.post('/api/codes', async (req, res) => {
     try {
-        const { code } = req.body;
-        await db.ref(`Codes/${code}`).set({ Code: code });
+        const { code, idFactiune } = req.body;
+        await db.ref(`Codes/${code}`).set({
+            Code: code,
+            IdFactiune: idFactiune || null
+        });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 app.get('/api/codes/:code', async (req, res) => {
     try {
