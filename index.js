@@ -87,15 +87,16 @@ app.post('/api/users', async (req, res) => {
     try {
         const { Username, PasswordHash, Grad, IdFactiune } = req.body;
 
-        if (!Username) return res.status(400).json({ error: "Username missing" });
+        if (!Username || !PasswordHash) {
+            return res.status(400).json({ error: "Username și PasswordHash sunt obligatorii" });
+        }
 
-        const path = `Users/${Username}`;
-        await db.ref(path).set({
+        await db.ref(`Users/${Username}`).set({
             Username,
             PasswordHash,
             Grad,
             Blocat: 0,
-            IdFactiune: IdFactiune || null
+            IdFactiune: IdFactiune ?? "Necunoscut"
         });
 
         res.json({ success: true });
@@ -214,25 +215,45 @@ app.get('/api/invoirems/:discordId', async (req, res) => {
 
 // ====================== CODURI (Codes) ======================
 // Codurile sunt la ROOT (nu sub FACTION_ID), conform structurii tale
+// Crează cod nou cu IdFactiune
 app.post('/api/codes', async (req, res) => {
     try {
-        const { code, idFactiune } = req.body;
-        await db.ref(`Codes/${code}`).set({
-            Code: code,
-            IdFactiune: idFactiune || null
-        });
+        console.log("[DEBUG] /api/codes called with body:", req.body);
+
+        // Obține proprietățile exact ca în JSON-ul C#
+        const { Code, IdFactiune } = req.body;
+
+        if (!Code || !IdFactiune) {
+            console.log("[DEBUG] Missing Code or IdFactiune");
+            return res.status(400).json({ error: "Code și IdFactiune sunt obligatorii" });
+        }
+
+        // Verifică dacă codul există deja
+        const snapshot = await db.ref(`Codes/${Code}`).once('value');
+        if (snapshot.exists()) {
+            return res.status(400).json({ error: "Codul există deja" });
+        }
+
+        // Salvează codul și IdFactiune
+        await db.ref(`Codes/${Code}`).set({ Code, IdFactiune });
+
+        console.log("[DEBUG] Cod salvat:", Code, "cu factiune:", IdFactiune);
         res.json({ success: true });
     } catch (err) {
+        console.error("[DEBUG] Eroare la /api/codes:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
 
+
 app.get('/api/codes/:code', async (req, res) => {
     try {
         const snapshot = await db.ref(`Codes/${req.params.code}`).once('value');
-        // Returnăm un obiect care să indice existența, nu doar un boolean
-        res.json({ exists: snapshot.exists() }); 
+        if (!snapshot.exists()) {
+            return res.json(null);
+        }
+        res.json(snapshot.val());
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
