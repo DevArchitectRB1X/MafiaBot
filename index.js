@@ -57,15 +57,30 @@ app.get('/api/users', async (req, res) => {
 });
 
 // Get single user by username
-app.get('/api/Users/:username', async (req, res) => {
+app.get('/api/users/:username', async (req, res) => {
     try {
-        const path = getRefPath(req, `Users/${req.params.username}`);
-        const snapshot = await db.ref(path).once('value');
-        res.json(snapshot.val() || null);
+        const username = req.params.username;
+        console.log("🔍 Requested user:", username);
+
+        const refPath = `Users/${username}`;
+        console.log("📁 Firebase path:", refPath);
+
+        const snapshot = await db.ref(refPath).once('value');
+        const data = snapshot.val();
+
+        console.log("📄 Firebase returned:", data);
+
+        if (!data) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json(data);
     } catch (err) {
+        console.error("❌ Error in /api/users/:username:", err);
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // Create new user
 app.post('/api/users', async (req, res) => {
