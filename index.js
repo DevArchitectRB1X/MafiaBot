@@ -85,14 +85,25 @@ app.get('/api/users/:username', async (req, res) => {
 // Create new user
 app.post('/api/users', async (req, res) => {
     try {
-        const { username, passwordHash, grad } = req.body;
-        const path = getRefPath(req, `Users/${username}`);
-        await db.ref(path).set({ Username: username, PasswordHash: passwordHash, Grad: grad, Blocat: 0 }); // Blocat: 0 added for consistency
+        const { Username, PasswordHash, Grad, IdFactiune } = req.body;
+
+        if (!Username) return res.status(400).json({ error: "Username missing" });
+
+        const path = `Users/${Username}`;
+        await db.ref(path).set({
+            Username,
+            PasswordHash,
+            Grad,
+            Blocat: 0,
+            IdFactiune: IdFactiune || null
+        });
+
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // ====================== ABSENTI ======================
 app.post('/api/absenti', async (req, res) => {
