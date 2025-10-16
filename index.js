@@ -159,7 +159,7 @@ app.get('/api/membrifactiune/:id', async (req, res) => {
     try {
         const id = req.params.id; // ex: mafiaruseasca
         const path = getRefPath(req, `membrifactiune/${id}`);
-        const snapshot = await db.ref(path).once('value');
+        const snapshot = await db.ref(`membrifactiune/${id}`).once('value');
 
         
     console.log("[DEBUG] faction id:", id);
