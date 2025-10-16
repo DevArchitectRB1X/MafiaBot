@@ -161,6 +161,15 @@ app.get('/api/membrifactiune/:id', async (req, res) => {
         const path = getRefPath(req, `membrifactiune/${id}`);
         const snapshot = await db.ref(path).once('value');
 
+        
+    console.log("[DEBUG] faction id:", id);
+
+    
+    console.log("[DEBUG] firebase path:", path);
+
+   
+    console.log("[DEBUG] snapshot exists:", snapshot.exists());
+
         if (!snapshot.exists()) {
             return res.status(404).json({ error: "Faction not found" });
         }
