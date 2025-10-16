@@ -154,6 +154,24 @@ app.get('/api/membrifactiune', async (req, res) => {
     }
 });
 
+// GET membru factiune dupa id
+app.get('/api/membrifactiune/:id', async (req, res) => {
+    try {
+        const id = req.params.id; // ex: mafiaruseasca
+        const path = getRefPath(req, `membrifactiune/${id}`);
+        const snapshot = await db.ref(path).once('value');
+
+        if (!snapshot.exists()) {
+            return res.status(404).json({ error: "Faction not found" });
+        }
+
+        res.json(snapshot.val());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // Schimba rank
 app.post('/api/membrifactiune/:id/rank', async (req, res) => {
     try {
