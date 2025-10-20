@@ -1,20 +1,21 @@
-import express from "express";
 import admin from "firebase-admin";
+import express from "express";
+import bodyParser from "body-parser";
 import cors from "cors";
-import fs from "fs";
 
-// ✅ Citește fișierul JSON manual (compatibil cu Render)
-const serviceAccount = JSON.parse(fs.readFileSync("./serviceAccountKey.json", "utf8"));
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// === Inițializare Firebase ===
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://<proiectul-tau>.firebaseio.com" // ← pune URL-ul real
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
 });
 
 const db = admin.database();
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 // ✅ GET — toate colecțiile
 app.get("/api/:collection", async (req, res) => {
