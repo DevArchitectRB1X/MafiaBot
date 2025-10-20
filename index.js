@@ -7,6 +7,15 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// === Middleware pentru API Key ===
+const API_KEY = process.env.CONDUCERE_API_KEY;
+app.use((req, res, next) => {
+    if (req.header("X-API-KEY") !== API_KEY) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    next();
+});
+
 // === Inițializare Firebase ===
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
@@ -17,16 +26,7 @@ admin.initializeApp({
 
 const db = admin.database();
 
-app.use((req, res, next) => {
-    const factionId = req.header('X-FACTION-ID');
-    if (!factionId) {
-        return res.status(400).json({ error: 'Header-ul X-FACTION-ID este obligatoriu' });
-    }
-    req.factionId = factionId; 
-    next();
-});
-
-// ✅ GET — toate colecțiile
+// === Rute GET, POST, PUT, DELETE ===
 app.get("/api/:collection", async (req, res) => {
     try {
         const ref = db.ref(req.params.collection);
@@ -38,7 +38,6 @@ app.get("/api/:collection", async (req, res) => {
     }
 });
 
-// ✅ GET — un document
 app.get("/api/:collection/:id", async (req, res) => {
     try {
         const { collection, id } = req.params;
@@ -50,7 +49,6 @@ app.get("/api/:collection/:id", async (req, res) => {
     }
 });
 
-// ✅ POST — adaugă un document
 app.post("/api/:collection", async (req, res) => {
     try {
         const { collection } = req.params;
@@ -66,7 +64,6 @@ app.post("/api/:collection", async (req, res) => {
     }
 });
 
-// ✅ PUT — actualizează un document
 app.put("/api/:collection/:id", async (req, res) => {
     try {
         const { collection, id } = req.params;
@@ -78,7 +75,6 @@ app.put("/api/:collection/:id", async (req, res) => {
     }
 });
 
-// ✅ DELETE — șterge un document
 app.delete("/api/:collection/:id", async (req, res) => {
     try {
         const { collection, id } = req.params;
@@ -91,4 +87,3 @@ app.delete("/api/:collection/:id", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
