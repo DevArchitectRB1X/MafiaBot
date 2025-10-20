@@ -17,6 +17,15 @@ admin.initializeApp({
 
 const db = admin.database();
 
+app.use((req, res, next) => {
+    const factionId = req.header('X-FACTION-ID');
+    if (!factionId) {
+        return res.status(400).json({ error: 'Header-ul X-FACTION-ID este obligatoriu' });
+    }
+    req.factionId = factionId; 
+    next();
+});
+
 // ✅ GET — toate colecțiile
 app.get("/api/:collection", async (req, res) => {
     try {
@@ -82,3 +91,4 @@ app.delete("/api/:collection/:id", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
