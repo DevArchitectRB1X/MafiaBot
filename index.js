@@ -64,19 +64,22 @@ app.post("/api/:collection", async (req, res) => {
     }
 });
 
-app.post("/api/:collection/:faction", async (req, res) => {
+app.post("/api/:collection/:id", async (req, res) => {
     try {
-        const { collection, faction } = req.params;
+        const { collection, id } = req.params; // <-- aici "id" este de fapt numele facțiunii
         const data = req.body;
 
         if (!data || Object.keys(data).length === 0)
             return res.status(400).json({ error: "Date lipsă" });
 
-        const id = data.id || data.Id || data.Code || data.Username || db.ref().push().key;
-        await db.ref(`${collection}/${factiune}/${id}`).set(data);
+        const itemId = data.id || data.Id || data.Code || data.Username || db.ref().push().key;
 
-        res.status(201).json({ success: true, id });
+        // id este de fapt facțiunea — așa că salvăm așa:
+        await db.ref(`${collection}/${id}/${itemId}`).set(data);
+
+        res.status(201).json({ success: true, id: itemId });
     } catch (error) {
+        console.error("Eroare POST:", error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -105,5 +108,6 @@ app.delete("/api/:collection/:id", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
 
