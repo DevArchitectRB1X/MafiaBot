@@ -3,10 +3,10 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+import bcrypt from "bcryptjs";
 import admin from 'firebase-admin';
 import crypto from 'crypto';
-// import helmet from 'helmet';
+import helmet from 'helmet';
 
 
 // ENV
@@ -34,7 +34,7 @@ const db = admin.database();
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-// app.use(helmet());
+app.use(helmet());
 
 // rate limit
 const limiter = rateLimit({
@@ -85,4 +85,5 @@ return crypto.randomBytes(40).toString('hex');
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
