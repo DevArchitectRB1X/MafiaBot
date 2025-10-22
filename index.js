@@ -65,8 +65,6 @@ async function removeExpiredRefreshTokens(username) {
 }
 
 // ======================= MIDDLEWARE JWT =======================
-import jwt from "jsonwebtoken";
-
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Nu există JWT" });
@@ -177,6 +175,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
