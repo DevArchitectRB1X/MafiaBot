@@ -66,7 +66,6 @@ async function removeExpiredRefreshTokens(username) {
 
 // ======================= MIDDLEWARE JWT =======================
 import jwt from "jsonwebtoken";
-const JWT_SECRET = process.env.JWT_SECRET || "schimba-me";
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -178,6 +177,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
