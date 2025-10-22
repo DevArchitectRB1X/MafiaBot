@@ -46,29 +46,28 @@ legacyHeaders: false
 app.use(limiter);
 
 
-// helper: get user from Firebase
-async function getUser(username) {
-const snap = await db.ref(`users/${username}`).once('value');
-return snap.exists() ? snap.val() : null;
-}
-
-
-// helper: save refresh token (hashed) in DB
+// Store refresh token hashed
 async function storeRefreshToken(username, tokenHash, expiresAt) {
-await db.ref(`refreshTokens/${username}`).push({ tokenHash, expiresAt });
+  await db.ref(`refreshTokens/${username}`).push({ tokenHash, expiresAt });
 }
 
-
+// Remove expired tokens
 async function removeExpiredRefreshTokens(username) {
-const now = Date.now();
-const snap = await db.ref(`refreshTokens/${username}`).once('value');
-if (!snap.exists()) return;
-const updates = {};
-snap.forEach(child => {
-const v = child.val();
-if (!v.expiresAt || v.expiresAt < now) updates[child.key] = null;
-});
-if (Object.keys(updates).length) await db.ref(`refreshTokens/${username}`).update(updates);
+  const now = Date.now();
+  const snap = await db.ref(`refreshTokens/${username}`).once("value");
+  if (!snap.exists()) return;
+  const updates = {};
+  snap.forEach(child => {
+    const v = child.val();
+    if (!v.expiresAt || v.expiresAt < now) updates[child.key] = null;
+  });
+  if (Object.keys(updates).length) await db.ref(`refreshTokens/${username}`).update(updates);
+}
+
+// Get user from Firebase
+async function getUser(username) {
+  const snap = await db.ref(`users/${username}`).once("value");
+  return snap.exists() ? snap.val() : null;
 }
 
 
@@ -82,8 +81,56 @@ function createRefreshToken() {
 return crypto.randomBytes(40).toString('hex');
 }
 
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
+
+  const user = await getUser(username);
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+
+  const valid = await bcrypt.compare(password, user.PasswordHash);
+  if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+
+  // create access token
+  const accessToken = createAccessToken({ username });
+
+  // create refresh token
+  const refreshToken = createRefreshToken();
+  const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+
+  // store hashed refresh token in Firebase
+  const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+  await storeRefreshToken(username, tokenHash, expiresAt);
+
+  res.json({ accessToken, refreshToken });
+});
+
+
+app.post("/api/refresh", async (req, res) => {
+  const { username, refreshToken } = req.body;
+  if (!username || !refreshToken) return res.status(400).json({ error: "Missing refresh token" });
+
+  await removeExpiredRefreshTokens(username);
+
+  const snap = await db.ref(`refreshTokens/${username}`).once("value");
+  if (!snap.exists()) return res.status(401).json({ error: "Invalid refresh token" });
+
+  let valid = false;
+  snap.forEach(child => {
+    const tokenHash = child.val().tokenHash;
+    if (tokenHash === crypto.createHash("sha256").update(refreshToken).digest("hex")) valid = true;
+  });
+
+  if (!valid) return res.status(401).json({ error: "Invalid refresh token" });
+
+  const accessToken = createAccessToken({ username });
+  res.json({ accessToken });
+});
+
+
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
