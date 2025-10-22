@@ -64,6 +64,24 @@ async function removeExpiredRefreshTokens(username) {
   if (Object.keys(updates).length) await db.ref(`refreshTokens/${username}`).update(updates);
 }
 
+// ======================= MIDDLEWARE JWT =======================
+import jwt from "jsonwebtoken";
+const JWT_SECRET = process.env.JWT_SECRET || "schimba-me";
+
+function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Nu există JWT" });
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2) return res.status(401).json({ error: "Token invalid" });
+  try {
+    const payload = jwt.verify(parts[1], JWT_SECRET);
+    req.user = payload;
+    next();
+  } catch (e) {
+    return res.status(401).json({ error: "Token invalid" });
+  }
+}
+
 // Get user from Firebase
 async function getUser(username) {
   const snap = await db.ref(`users/${username}`).once("value");
@@ -127,10 +145,40 @@ app.post("/api/refresh", async (req, res) => {
   res.json({ accessToken });
 });
 
+// ======================= GET COLLECTION / ITEM =======================
+app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const ref = id ? db.ref(`${collection}/${id}`) : db.ref(collection);
+    const snapshot = await ref.once("value");
+
+    if (!snapshot.exists()) return res.status(404).json({ error: "Nu există date" });
+    res.json(snapshot.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ======================= POST TO COLLECTION =======================
+app.post("/api/:collection", authMiddleware, async (req, res) => {
+  try {
+    const { collection } = req.params;
+    const data = req.body;
+    if (!data || Object.keys(data).length === 0)
+      return res.status(400).json({ error: "Date lipsă" });
+
+    const key = db.ref().child(collection).push().key;
+    await db.ref(`${collection}/${key}`).set(data);
+    res.status(201).json({ success: true, id: key });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
