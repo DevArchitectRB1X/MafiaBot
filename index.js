@@ -64,9 +64,9 @@ app.post("/api/:collection", async (req, res) => {
     }
 });
 
-app.post("/api/:collection/:id", async (req, res) => {
+app.post("/api/:collection/:faction", async (req, res) => {
     try {
-        const { collection, id } = req.params;
+        const { collection, faction } = req.params;
         const data = req.body;
 
         if (!data || Object.keys(data).length === 0)
@@ -105,4 +105,5 @@ app.delete("/api/:collection/:id", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+
 
