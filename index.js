@@ -21,7 +21,7 @@ const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: `https://${serviceAccount.project_id}-default-rtdb.europe-west1.firebasedatabase.app`
+  databaseURL: `https://${serviceAccount.project_id}.firebaseio.com`
 });
 
 const db = admin.database();
@@ -64,6 +64,21 @@ app.post("/api/:collection", async (req, res) => {
     }
 });
 
+app.post("/api/:collection/:id", async (req, res) => {
+    try {
+        const { collection } = req.params;
+        const data = req.body;
+        if (!data || Object.keys(data).length === 0)
+            return res.status(400).json({ error: "Date lipsă" });
+
+        const id = data.id || data.Id || data.Code || data.Username || db.ref().push().key;
+        await db.ref(`${collection}/${id}`).set(data);
+        res.status(201).json({ success: true, id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.put("/api/:collection/:id", async (req, res) => {
     try {
         const { collection, id } = req.params;
@@ -87,4 +102,3 @@ app.delete("/api/:collection/:id", async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
