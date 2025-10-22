@@ -156,6 +156,18 @@ app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
   }
 });
 
+app.get("/api/Codes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snap = await db.ref(`Codes/${id}`).once("value");
+    if (!snap.exists()) return res.status(404).json({ error: "Cod invalid" });
+    res.json(snap.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ======================= POST TO COLLECTION =======================
 app.post("/api/:collection", authMiddleware, async (req, res) => {
   try {
@@ -175,6 +187,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
