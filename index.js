@@ -90,7 +90,7 @@ function createRefreshToken() {
 return crypto.randomBytes(40).toString('hex');
 }
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/users", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
 
@@ -203,4 +203,5 @@ app.post("/api/:collection", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
