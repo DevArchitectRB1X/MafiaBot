@@ -144,7 +144,7 @@ app.post("/api/refresh", async (req, res) => {
 });
 
 // ======================= GET COLLECTION / ITEM =======================
-app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
+app.get("/api/:collection/:id?", async (req, res) => {
   try {
     const { collection, id } = req.params;
     const ref = id ? db.ref(`${collection}/${id}`) : db.ref(collection);
@@ -188,6 +188,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
