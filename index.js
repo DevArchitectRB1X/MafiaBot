@@ -32,6 +32,7 @@ const db = admin.database();
 
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(bodyParser.json());
 app.use(helmet());
@@ -187,6 +188,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
