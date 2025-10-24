@@ -135,6 +135,17 @@ app.post("/api/refresh", async (req, res) => {
   res.json({ accessToken });
 });
 
+// Endpoint pentru a returna versiunea aplicației
+app.get("/api/stuff/Version", async (req, res) => {
+  try {
+    // Poți să setezi versiunea manual sau să o iei din baza de date
+    const appVersion = process.env.APP_VERSION || "1.0.0";
+    res.json({ version: appVersion });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ======================= GET COLLECTION / ITEM =======================
 app.get("/api/:collection/:id?", async (req, res) => {
   try {
@@ -192,3 +203,4 @@ app.post("/api/:collection", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
