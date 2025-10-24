@@ -77,9 +77,13 @@ function authMiddleware(req, res, next) {
 
 // Get user from Firebase
 async function getUser(username) {
-  const snap = await db.ref(`users/${username}`).once("value");
-  return snap.exists() ? snap.val() : null;
+  const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+  if (!snap.exists()) return null;
+  const val = snap.val();
+  const key = Object.keys(val)[0]; // luam primul rezultat
+  return val[key];
 }
+
 
 // create access token
 function createAccessToken(payload) {
@@ -203,5 +207,6 @@ app.post("/api/:collection", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
