@@ -8,19 +8,16 @@ import admin from 'firebase-admin';
 import crypto from 'crypto';
 import helmet from 'helmet';
 
-
 // ENV
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m';
 const REFRESH_TOKEN_EXPIRES_DAYS = parseInt(process.env.REFRESH_TOKEN_EXPIRES_DAYS || '30', 10);
 
-
 if (!JWT_SECRET) {
 console.error('JWT_SECRET is required in env');
 process.exit(1);
 }
-
 
 // init firebase admin
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
@@ -29,7 +26,6 @@ credential: admin.credential.cert(serviceAccount),
 databaseURL: process.env.FIREBASE_DB_URL
 });
 const db = admin.database();
-
 
 const app = express();
 app.set('trust proxy', 1);
@@ -45,7 +41,6 @@ standardHeaders: true,
 legacyHeaders: false
 });
 app.use(limiter);
-
 
 // Store refresh token hashed
 async function storeRefreshToken(username, tokenHash, expiresAt) {
@@ -86,12 +81,10 @@ async function getUser(username) {
   return snap.exists() ? snap.val() : null;
 }
 
-
 // create access token
 function createAccessToken(payload) {
 return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
-
 
 function createRefreshToken() {
 return crypto.randomBytes(40).toString('hex');
@@ -176,12 +169,13 @@ app.post("/api/:collection", async (req, res) => {
     if (!data || Object.keys(data).length === 0)
       return res.status(400).json({ error: "Date lipsă" });
 
-    // 👉 Permite doar pentru colecția "users" fără token
+    // ✅ Doar colecția "users" este permisă fără JWT
     if (collection.toLowerCase() !== "users") {
       const authHeader = req.headers.authorization;
       if (!authHeader) return res.status(401).json({ error: "Nu există JWT" });
       const parts = authHeader.split(" ");
       if (parts.length !== 2) return res.status(401).json({ error: "Token invalid" });
+
       try {
         jwt.verify(parts[1], JWT_SECRET);
       } catch {
