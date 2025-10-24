@@ -75,6 +75,18 @@ function authMiddleware(req, res, next) {
   }
 }
 
+async function getUserByUsername(username) {
+    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+    if (!snap.exists()) return null;
+
+    let user = null;
+    snap.forEach(child => {
+        user = child.val(); // luam primul match
+    });
+    return user;
+}
+
+
 // Get user from Firebase
 async function getUser(username) {
   const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
@@ -99,11 +111,11 @@ app.post("/api/login", async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
 
-  const user = await getUser(username);
-  if (!user) return res.status(401).json({ error: "Invalid credentials" });
+  const user = await getUserByUsername(username);
+if (!user) return res.status(401).json({ error: "Invalid credentials" });
+const valid = await bcrypt.compare(password, user.PasswordHash);
+if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
-  const valid = await bcrypt.compare(password, user.PasswordHash);
-  if (!valid) return res.status(401).json({ error: "Invalid credentials" });
 
   // create access token
   const accessToken = createAccessToken({ username });
@@ -209,6 +221,7 @@ app.post("/api/:collection", async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
