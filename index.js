@@ -121,7 +121,6 @@ app.post("/api/login", async (req, res) => {
   res.json({ accessToken, refreshToken });
 });
 
-
 app.post("/api/refresh", async (req, res) => {
   const { username, refreshToken } = req.body;
   if (!username || !refreshToken) return res.status(400).json({ error: "Missing refresh token" });
@@ -168,14 +167,27 @@ app.get("/api/Codes/:id", async (req, res) => {
   }
 });
 
-
 // ======================= POST TO COLLECTION =======================
 app.post("/api/:collection", async (req, res) => {
   try {
     const { collection } = req.params;
     const data = req.body;
+
     if (!data || Object.keys(data).length === 0)
       return res.status(400).json({ error: "Date lipsă" });
+
+    // 👉 Permite doar pentru colecția "users" fără token
+    if (collection.toLowerCase() !== "users") {
+      const authHeader = req.headers.authorization;
+      if (!authHeader) return res.status(401).json({ error: "Nu există JWT" });
+      const parts = authHeader.split(" ");
+      if (parts.length !== 2) return res.status(401).json({ error: "Token invalid" });
+      try {
+        jwt.verify(parts[1], JWT_SECRET);
+      } catch {
+        return res.status(401).json({ error: "Token invalid" });
+      }
+    }
 
     const key = db.ref().child(collection).push().key;
     await db.ref(`${collection}/${key}`).set(data);
@@ -185,16 +197,4 @@ app.post("/api/:collection", async (req, res) => {
   }
 });
 
-
-// AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
-
-
-
-
-
-
-
-
-
-
