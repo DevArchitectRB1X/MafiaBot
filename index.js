@@ -170,7 +170,7 @@ app.get("/api/Codes/:id", async (req, res) => {
 
 
 // ======================= POST TO COLLECTION =======================
-app.post("/api/:collection", authMiddleware, async (req, res) => {
+app.post("/api/:collection", async (req, res) => {
   try {
     const { collection } = req.params;
     const data = req.body;
@@ -188,6 +188,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 
 // AUTH middleware
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
