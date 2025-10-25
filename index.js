@@ -99,6 +99,7 @@ function createRefreshToken() {
 // ======================= LOGIN =======================
 app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
+    const user = await getUserByUsername(username);
     console.log("=== DEBUG LOGIN ===");
     console.log("Primit username:", username);
     console.log("Primit password:", password ? "(exista)" : "(lipsa)");
@@ -112,7 +113,6 @@ console.log("Password primit:", password);
     }
 
     try {
-        const user = await getUserByUsername(username);
         console.log("Rezultat getUserByUsername:", user ? "gasit" : "negasit");
 
         if (!user) {
@@ -196,5 +196,6 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
