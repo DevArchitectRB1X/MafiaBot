@@ -204,6 +204,44 @@ app.post("/api/refresh", async (req, res) => {
     res.json({ accessToken });
 });
 
+// GET cod după ID
+app.get("/api/Codes/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const snap = await db.ref(`Codes/${id}`).once("value");
+        if (!snap.exists()) return res.status(404).json({ error: "Cod invalid" });
+        res.json(snap.val());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST cod (dacă vrei să creezi coduri noi)
+app.post("/api/Codes", async (req, res) => {
+    try {
+        const { Code, IdFactiune } = req.body;
+        if (!Code || !IdFactiune) return res.status(400).json({ error: "Date lipsa" });
+
+        const key = db.ref("Codes").push().key;
+        await db.ref(`Codes/${key}`).set({ Code, IdFactiune });
+        res.status(201).json({ success: true, id: key });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE cod după ID
+app.delete("/api/Codes/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db.ref(`Codes/${id}`).remove();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
     try {
@@ -232,6 +270,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
