@@ -99,22 +99,48 @@ function createRefreshToken() {
 // ======================= LOGIN =======================
 app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
+    console.log("=== DEBUG LOGIN ===");
+    console.log("Primit username:", username);
+    console.log("Primit password:", password ? "(exista)" : "(lipsa)");
 
-    const user = await getUserByUsername(username);
-    if (!user) return res.status(401).json({ error: "Invalid credentials" });
+    if (!username || !password) {
+        console.log("Lipsesc credentiale");
+        return res.status(400).json({ error: "Missing credentials" });
+    }
 
-    const valid = await bcrypt.compare(password, user.PasswordHash);
-    if (!valid) return res.status(401).json({ error: "Invalid credentials" });
+    try {
+        const user = await getUserByUsername(username);
+        console.log("Rezultat getUserByUsername:", user ? "gasit" : "negasit");
 
-    // Tokens
-    const accessToken = createAccessToken({ username });
-    const refreshToken = createRefreshToken();
-    const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
-    const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-    await storeRefreshToken(username, tokenHash, expiresAt);
+        if (!user) {
+            console.log("User negasit in baza de date!");
+            return res.status(401).json({ error: "Invalid credentials (user not found)" });
+        }
 
-    res.json({ accessToken, refreshToken });
+        console.log("User gasit:", user.Username, "-> verific parola...");
+
+        const valid = await bcrypt.compare(password, user.PasswordHash);
+        console.log("Rezultat comparare parola:", valid);
+
+        if (!valid) {
+            console.log("Parola invalida pentru user:", username);
+            return res.status(401).json({ error: "Invalid credentials (wrong password)" });
+        }
+
+        // Tokens
+        const accessToken = createAccessToken({ username });
+        const refreshToken = createRefreshToken();
+        const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+        const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+        await storeRefreshToken(username, tokenHash, expiresAt);
+        console.log("Token generat si stocat cu succes!");
+
+        res.json({ accessToken, refreshToken });
+    } catch (err) {
+        console.error("EROARE LA LOGIN:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ======================= REFRESH TOKEN =======================
@@ -167,3 +193,4 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
