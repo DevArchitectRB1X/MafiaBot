@@ -19,6 +19,11 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
+const hash = "$2a$11$FATBlyxuBOTMtxuzdFnEG.1WCLbPfXZ5Qlas.AftITNd8PkBJ4kq.";
+const plain = "Alin";
+
+bcrypt.compare(plain, hash).then(res => console.log("Rezultat bcrypt.compare:", res));
+
 // Init Firebase Admin
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 admin.initializeApp({
@@ -196,6 +201,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
