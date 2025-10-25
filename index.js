@@ -19,11 +19,6 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-const hash = "$2a$11$FATBlyxuBOTMtxuzdFnEG.1WCLbPfXZ5Qlas.AftITNd8PkBJ4kq.";
-const plain = "Alin";
-
-bcrypt.compare(plain, hash).then(res => console.log("Rezultat bcrypt.compare:", res));
-
 // Init Firebase Admin
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 admin.initializeApp({
@@ -151,6 +146,42 @@ console.log("Password primit:", password);
     }
 });
 
+// ======================= CREATE USER =======================
+app.post("/api/users", async (req, res) => {
+    try {
+        const { username, password, grad = 0, idFactiune } = req.body;
+
+        if (!username || !password || !idFactiune) {
+            return res.status(400).json({ error: "Date incomplete" });
+        }
+
+        // 1️⃣ Verificăm dacă există deja user cu același username
+        const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+        if (snap.exists()) return res.status(400).json({ error: "User deja existent" });
+
+        // 2️⃣ Criptăm parola cu bcrypt (Node.js)
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // 3️⃣ Creăm obiectul user
+        const newUser = { 
+            Username: username,
+            PasswordHash: passwordHash,
+            Grad: grad,
+            IdFactiune: idFactiune,
+            Blocat: 0
+        };
+
+        // 4️⃣ Adăugăm în Firebase
+        const key = db.ref().child("users").push().key;
+        await db.ref(`users/${key}`).set(newUser);
+
+        res.status(201).json({ success: true, message: "User creat cu succes", id: key });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // ======================= REFRESH TOKEN =======================
 app.post("/api/refresh", async (req, res) => {
     const { username, refreshToken } = req.body;
@@ -201,6 +232,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
