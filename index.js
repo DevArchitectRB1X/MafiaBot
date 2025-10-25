@@ -241,6 +241,32 @@ app.delete("/api/Codes/:id", async (req, res) => {
     }
 });
 
+app.post("/api/jucatoriacc/add", async (req, res) => {
+  try {
+    const { username, addedBy, notes, expiresInHours = 168 } = req.body;
+
+    if (!username) return res.status(400).json({ error: "Username lipsă" });
+
+    const now = Date.now();
+    const expiresAt = now + expiresInHours * 60 * 60 * 1000;
+
+    const data = {
+      Username: username,
+      AddedBy: addedBy || "Unknown",
+      DateAdded: new Date(now).toISOString(),
+      ExpiresAt: new Date(expiresAt).toISOString(),
+      Status: "In teste",
+      Notes: notes || ""
+    };
+
+    const ref = await db.ref("teste").push(data);
+    res.json({ success: true, id: ref.key, data });
+  } catch (err) {
+    console.error("Eroare /api/jucatoriacc/add:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
@@ -270,3 +296,4 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
