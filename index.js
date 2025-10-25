@@ -102,6 +102,9 @@ app.post("/api/login", async (req, res) => {
     console.log("=== DEBUG LOGIN ===");
     console.log("Primit username:", username);
     console.log("Primit password:", password ? "(exista)" : "(lipsa)");
+    console.log("User gasit:", user.Username);
+console.log("Hash din DB:", user.PasswordHash);
+console.log("Password primit:", password);
 
     if (!username || !password) {
         console.log("Lipsesc credentiale");
@@ -138,8 +141,8 @@ app.post("/api/login", async (req, res) => {
 
         res.json({ accessToken, refreshToken });
     } catch (err) {
-        console.error("EROARE LA LOGIN:", err);
-        res.status(500).json({ error: err.message });
+        console.error("Eroare la bcrypt.compare:", err);
+  return res.status(500).json({ error: "Eroare interna la comparare parola" });
     }
 });
 
@@ -193,4 +196,5 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
