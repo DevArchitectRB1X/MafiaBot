@@ -267,6 +267,18 @@ app.post("/api/jucatoriacc/add", async (req, res) => {
   }
 });
 
+app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        await db.ref(`jucatoriacc/${id}`).update(data);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // ======================= GET JUCATORI ACC DUPĂ CONTFACTIUNE =======================
 app.get("/api/jucatoriacc/:contFactiune", async (req, res) => {
   const { contFactiune } = req.params;
@@ -349,6 +361,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
