@@ -357,36 +357,17 @@ app.get("/api/jucatoriacc/:contFactiune", async (req, res) => {
 
 
 // ======================= GET MEMBRI FACTIUNE DUPĂ CONTFACTIUNE =======================
-app.get("/api/membrifactiune/:contFactiune", async (req, res) => {
-  const { contFactiune } = req.params;
-  const snap = await db.ref("membrifactiune").once("value");
-
-  if (!snap.exists()) return res.status(404).json({ error: "Nu exista membri" });
-
-  const results = [];
-
-  snap.forEach(child => {
-    const data = child.val();
-    if (data.contFactiune === contFactiune) {
-      results.push({ id: child.key, ...data });
-    }
-  });
-
-  res.json(results);
-});
-
 app.post("/api/membrifactiune", async (req, res) => {
     try {
         const { username, numeDiscord, rank, zile, contFactiune } = req.body;
 
         if (!username || !numeDiscord || !contFactiune) {
-            return res.status(400).json({ error: "Date incomplete" });
+            console.log("❌ Date lipsă:", req.body);
+            return res.status(400).json({ error: "Date incomplete", body: req.body });
         }
 
-        // 🔑 Generează un ID unic
         const key = db.ref().child("membrifactiune").push().key;
 
-        // 🧱 Creează obiectul membrului
         const membru = {
             username,
             numeDiscord,
@@ -395,7 +376,6 @@ app.post("/api/membrifactiune", async (req, res) => {
             contFactiune
         };
 
-        // 📝 Adaugă în Firebase sub factiune
         await db.ref(`membrifactiune/${contFactiune}/${key}`).set(membru);
 
         res.status(201).json({ success: true, id: key });
@@ -404,7 +384,6 @@ app.post("/api/membrifactiune", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
 
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
@@ -506,6 +485,7 @@ app.delete("/api/jucatoriacc/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
