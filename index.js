@@ -204,6 +204,17 @@ app.post("/api/refresh", async (req, res) => {
     res.json({ accessToken });
 });
 
+app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+        await db.ref(`jucatoriacc/${id}`).update(data);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // GET cod după ID
 app.get("/api/Codes/:id", async (req, res) => {
     try {
@@ -361,6 +372,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
