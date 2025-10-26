@@ -267,6 +267,47 @@ app.post("/api/jucatoriacc/add", async (req, res) => {
   }
 });
 
+// ======================= GET JUCATORI ACC DUPĂ CONTFACTIUNE =======================
+app.get("/api/jucatoriacc/:contFactiune", async (req, res) => {
+  const { contFactiune } = req.params;
+  const snap = await db.ref("jucatoriacc").once("value");
+
+  if (!snap.exists()) return res.status(404).json({ error: "Nu exista jucatori" });
+
+  const results = [];
+
+  snap.forEach(child => {
+    const data = child.val();
+    // filtrăm doar cei care aparțin facțiunii cerute
+    if (data.contFactiune === contFactiune) {
+      results.push({ id: child.key, ...data });
+    }
+  });
+
+  res.json(results);
+});
+
+
+// ======================= GET MEMBRI FACTIUNE DUPĂ CONTFACTIUNE =======================
+app.get("/api/membrifactiune/:contFactiune", async (req, res) => {
+  const { contFactiune } = req.params;
+  const snap = await db.ref("membrifactiune").once("value");
+
+  if (!snap.exists()) return res.status(404).json({ error: "Nu exista membri" });
+
+  const results = [];
+
+  snap.forEach(child => {
+    const data = child.val();
+    if (data.contFactiune === contFactiune) {
+      results.push({ id: child.key, ...data });
+    }
+  });
+
+  res.json(results);
+});
+
+
 
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
@@ -296,4 +337,5 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
