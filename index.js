@@ -396,7 +396,7 @@ app.post("/api/membrifactiune", async (req, res) => {
         };
 
         // 📝 Adaugă în Firebase sub factiune
-        await db.ref(`membrifactiune/${key}`).set(membru);
+        await db.ref(`membrifactiune/${contFactiune}/${key}`).set(membru);
 
         res.status(201).json({ success: true, id: key });
     } catch (err) {
@@ -404,6 +404,7 @@ app.post("/api/membrifactiune", async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
@@ -505,6 +506,7 @@ app.delete("/api/jucatoriacc/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
