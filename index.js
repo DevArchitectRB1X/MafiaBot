@@ -430,7 +430,34 @@ app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
     }
 });
 
+// ======================= GET JUCATORI ACCEPTAȚI DUPĂ FACTIUNE =======================
+app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
+    try {
+        const { factionName } = req.params;
+
+        console.log("=== DEBUG GET JUCATORI ACCEPTAȚI ===");
+        console.log("Factiune primita:", factionName);
+
+        const ref = db.ref("jucatoriacc");
+        const snapshot = await ref.orderByChild("contFactiune").equalTo(factionName).once("value");
+
+        if (!snapshot.exists()) {
+            console.log("Nu s-au găsit jucători pentru facțiunea:", factionName);
+            return res.json([]);
+        }
+
+        const data = snapshot.val();
+        console.log("Jucători găsiți:", Object.keys(data).length);
+        res.json(data);
+    } catch (err) {
+        console.error("Eroare la GET jucatori acceptati:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
