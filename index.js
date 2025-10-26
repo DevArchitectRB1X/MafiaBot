@@ -455,8 +455,29 @@ app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
     }
 });
 
+// 🗑️ Șterge un jucător acceptat după key
+app.delete("/api/jucatoriacc/:key", async (req, res) => {
+    try {
+        const { key } = req.params;
+
+        if (!key) {
+            return res.status(400).json({ error: "Lipsește cheia jucătorului" });
+        }
+
+        // Șterge jucătorul din Firebase
+        await db.ref(`jucatoriacc/${key}`).remove();
+
+        console.log(`✅ Jucătorul cu key ${key} a fost șters din jucatoriacc.`);
+        res.json({ success: true, message: `Jucătorul ${key} a fost șters.` });
+    } catch (err) {
+        console.error("❌ Eroare la ștergerea jucătorului:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
