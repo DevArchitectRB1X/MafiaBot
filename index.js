@@ -375,7 +375,35 @@ app.get("/api/membrifactiune/:contFactiune", async (req, res) => {
   res.json(results);
 });
 
+app.post("/api/membrifactiune", async (req, res) => {
+    try {
+        const { username, numeDiscord, rank, zile, contFactiune } = req.body;
 
+        if (!username || !numeDiscord || !contFactiune) {
+            return res.status(400).json({ error: "Date incomplete" });
+        }
+
+        // 🔑 Generează un ID unic
+        const key = db.ref().child("membrifactiune").push().key;
+
+        // 🧱 Creează obiectul membrului
+        const membru = {
+            username,
+            numeDiscord,
+            rank: rank || 1,
+            zile: zile || 0,
+            contFactiune
+        };
+
+        // 📝 Adaugă în Firebase sub factiune
+        await db.ref(`membrifactiune/${key}`).set(membru);
+
+        res.status(201).json({ success: true, id: key });
+    } catch (err) {
+        console.error("Eroare la adăugare membru:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 // ======================= GET / POST GENERIC =======================
 app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
@@ -477,6 +505,7 @@ app.delete("/api/jucatoriacc/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
