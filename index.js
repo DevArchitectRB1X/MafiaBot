@@ -96,6 +96,25 @@ function createRefreshToken() {
     return crypto.randomBytes(40).toString('hex');
 }
 
+// ======================= UPDATE =======================
+app.put("/api/:collection/:id", authMiddleware, async (req, res) => {
+    try {
+        const { collection, id } = req.params;
+        const data = req.body;
+        if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: "Date lipsă" });
+
+        const ref = db.ref(`${collection}/${id}`);
+        const snapshot = await ref.once("value");
+        if (!snapshot.exists()) return res.status(404).json({ error: "Nu există acest jucător" });
+
+        await ref.update(data);
+        res.json({ success: true, message: "Jucător actualizat cu succes" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // ======================= LOGIN =======================
 app.post("/api/login", async (req, res) => {
     const { username, password } = req.body;
@@ -372,6 +391,7 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
