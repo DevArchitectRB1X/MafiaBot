@@ -405,38 +405,33 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 // ======================= UPDATE JUCĂTOR =======================
-app.put("/api/jucatoriacc/:id", async (req, res) => {
+// ======================= GET JUCATORI ACCEPTAȚI DUPĂ FACTIUNE =======================
+app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
     try {
-        const { id } = req.params;
-        const data = req.body;
+        const { factionName } = req.params;
 
-        console.log("=== DEBUG UPDATE ===");
-        console.log("ID primit:", id);
-        console.log("Date primite:", data);
+        console.log("=== DEBUG GET JUCATORI ACCEPTAȚI ===");
+        console.log("Factiune primita:", factionName);
 
-        if (!id) {
-            return res.status(400).json({ error: "Lipsește ID-ul jucătorului" });
-        }
-
-        const ref = db.ref(`jucatoriacc/${id}`);
-        const snapshot = await ref.once("value");
+        const ref = db.ref("jucatoriacc");
+        const snapshot = await ref.orderByChild("contFactiune").equalTo(factionName).once("value");
 
         if (!snapshot.exists()) {
-            return res.status(404).json({ error: "Jucătorul nu există în baza de date" });
+            console.log("Nu s-au găsit jucători pentru facțiunea:", factionName);
+            return res.json([]);
         }
 
-        await ref.update(data);
-
-        console.log("Actualizare reușită pentru:", id);
-        res.json({ success: true, message: "Jucător actualizat cu succes" });
+        const data = snapshot.val();
+        console.log("Jucători găsiți:", Object.keys(data).length);
+        res.json(data);
     } catch (err) {
-        console.error("Eroare la update:", err);
+        console.error("Eroare la GET jucatori acceptati:", err);
         res.status(500).json({ error: err.message });
     }
 });
 
-
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
