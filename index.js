@@ -270,21 +270,33 @@ app.post("/api/jucatoriacc/add", async (req, res) => {
 // ======================= GET JUCATORI ACC DUPĂ CONTFACTIUNE =======================
 app.get("/api/jucatoriacc/:contFactiune", async (req, res) => {
   const { contFactiune } = req.params;
-  const snap = await db.ref("jucatoriacc").once("value");
+  console.log("=== DEBUG /api/jucatoriacc ===");
+  console.log("Factiune primita:", contFactiune);
 
-  if (!snap.exists()) return res.status(404).json({ error: "Nu exista jucatori" });
+  try {
+    const snap = await db.ref("jucatoriacc").once("value");
+    console.log("Exista snapshot:", snap.exists());
 
-  const results = [];
-
-  snap.forEach(child => {
-    const data = child.val();
-    // filtrăm doar cei care aparțin facțiunii cerute
-    if (data.contFactiune === contFactiune) {
-      results.push({ id: child.key, ...data });
+    if (!snap.exists()) {
+      console.log("❌ Nu exista nodul jucatoriacc in Firebase");
+      return res.status(404).json({ error: "Nu exista jucatori" });
     }
-  });
 
-  res.json(results);
+    const results = [];
+    snap.forEach(child => {
+      const data = child.val();
+      console.log("-> Verific jucator:", child.key, " | contFactiune:", data.contFactiune);
+      if (data.contFactiune === contFactiune) {
+        results.push({ id: child.key, ...data });
+      }
+    });
+
+    console.log("Rezultate filtrate:", results.length);
+    res.json(results);
+  } catch (err) {
+    console.error("🔥 Eroare la /api/jucatoriacc:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
@@ -337,5 +349,6 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
