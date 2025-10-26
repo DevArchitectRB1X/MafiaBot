@@ -223,13 +223,27 @@ app.post("/api/refresh", async (req, res) => {
     res.json({ accessToken });
 });
 
-app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
+// ======================= GET JUCĂTOR DUPĂ ID =======================
+app.get("/api/jucatoriacc/:id", async (req, res) => {
     try {
         const { id } = req.params;
-        const data = req.body;
-        await db.ref(`jucatoriacc/${id}`).update(data);
-        res.json({ success: true });
+
+        console.log("=== DEBUG GET JUCATOR ===");
+        console.log("ID primit:", id);
+
+        const ref = db.ref(`jucatoriacc/${id}`);
+        const snapshot = await ref.once("value");
+
+        if (!snapshot.exists()) {
+            console.log("Jucătorul nu există:", id);
+            return res.json([]);
+        }
+
+        const data = snapshot.val();
+        console.log("Date jucător:", data);
+        res.json(data);
     } catch (err) {
+        console.error("Eroare la GET jucator:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -423,6 +437,7 @@ app.put("/api/jucatoriacc/:id", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
