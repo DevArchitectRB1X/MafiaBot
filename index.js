@@ -390,7 +390,40 @@ app.post("/api/:collection", authMiddleware, async (req, res) => {
     }
 });
 
+// ======================= UPDATE JUCĂTOR =======================
+app.put("/api/jucatoriacc/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+
+        console.log("=== DEBUG UPDATE ===");
+        console.log("ID primit:", id);
+        console.log("Date primite:", data);
+
+        if (!id) {
+            return res.status(400).json({ error: "Lipsește ID-ul jucătorului" });
+        }
+
+        const ref = db.ref(`jucatoriacc/${id}`);
+        const snapshot = await ref.once("value");
+
+        if (!snapshot.exists()) {
+            return res.status(404).json({ error: "Jucătorul nu există în baza de date" });
+        }
+
+        await ref.update(data);
+
+        console.log("Actualizare reușită pentru:", id);
+        res.json({ success: true, message: "Jucător actualizat cu succes" });
+    } catch (err) {
+        console.error("Eroare la update:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
