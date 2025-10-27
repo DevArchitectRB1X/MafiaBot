@@ -483,19 +483,22 @@ app.delete("/api/jucatoriacc/:key", async (req, res) => {
     }
 });
 
+// GET config
+app.get("/api/config", authMiddleware, async (req, res) => {
+  try {
+    const snap = await db.ref("config").once("value");
+    res.json(snap.exists() ? snap.val() : {});
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT update config
+app.put("/api/config", authMiddleware, async (req, res) => {
+  try {
+    const data = req.body;
+    await db.ref("config").set(data);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
