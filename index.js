@@ -526,34 +526,31 @@ app.get("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
 });
 
 // ✅ POST — adaugă o sancțiune nouă pentru o facțiune
-app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+app.post("/api/sanctiuni/:factionId", async (req, res) => {
   try {
     const { factionId } = req.params;
-    const { Id, Tip, Motiv, Valoare } = req.body;
+    const { IdDiscord, Tip, Motiv, Valoare = 0 } = req.body;
 
-    if (!Id || !Tip) {
-      return res.status(400).json({ error: "Lipsește Id sau Tip în corpul cererii" });
-    }
+    if (!IdDiscord || !Tip)
+      return res.status(400).json({ error: "Lipsește IdDiscord sau Tip în corpul cererii" });
 
-    const newKey = db.ref(`sanctiuni/${factionId}`).push().key;
-    const data = {
-      Id,
+    const key = db.ref().child(`sanctiuni/${factionId}`).push().key;
+
+    await db.ref(`sanctiuni/${factionId}/${key}`).set({
+      IdDiscord,
       Tip,
       Motiv: Motiv || "-",
       Valoare: Valoare || 0,
-      AddedAt: new Date().toISOString(),
-      AddedBy: req.user?.username || "unknown"
-    };
+      Data: new Date().toISOString()
+    });
 
-    await db.ref(`sanctiuni/${factionId}/${newKey}`).set(data);
-    console.log(`✅ Sancțiune adăugată pentru ${factionId}:`, data);
-
-    res.status(201).json({ success: true, id: newKey, data });
+    res.json({ success: true, key });
   } catch (err) {
-    console.error("Eroare la POST sancțiuni:", err);
+    console.error("Eroare la adăugare sancțiune:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ======================= GET / POST INVOIRE =======================
 
@@ -723,6 +720,7 @@ app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
