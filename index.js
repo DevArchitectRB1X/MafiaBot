@@ -658,34 +658,36 @@ app.post("/api/invoirems/:factionId", async (req, res) => {
 app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
   try {
     const { factionId } = req.params;
-    const { discordId, tip, motiv, valoare } = req.body;
+    const { IdDiscord, Tip, Motiv, Valoare = 0 } = req.body;
 
-    // verificăm că există datele
-    if (!discordId || !tip || !motiv) {
-      console.log("❌ Lipsă date sancțiune:", req.body);
-      return res.status(400).json({ error: "Date lipsă" });
+    console.log("=== DEBUG SANCTIUNE ===");
+    console.log("Factiune:", factionId);
+    console.log("Body primit:", req.body);
+
+    if (!IdDiscord || !Tip || !Motiv) {
+      return res.status(400).json({ error: "Lipsesc date obligatorii" });
     }
 
-    // Structura finală în Firebase
-    const data = {
-      IdDiscord: discordId,
-      Tip: tip,
-      Motiv: motiv,
-      Valoare: valoare || 0,
+    const key = db.ref().child("sanctiuni").push().key;
+
+    const sanctiune = {
+      IdDiscord,
+      Tip,
+      Motiv,
+      Valoare,
       Data: new Date().toISOString(),
+      FactionId: factionId
     };
 
-    // push cu cheie automată
-    const key = db.ref().child("sanctiuni").push().key;
-    await db.ref(`sanctiuni/${factionId}/${key}`).set(data);
+    await db.ref(`sanctiuni/${factionId}/${key}`).set(sanctiune);
 
-    console.log(`✅ Sancțiune adăugată pentru ${discordId} în ${factionId}`);
-    res.status(201).json({ success: true, id: key });
+    res.status(201).json({ success: true, id: key, data: sanctiune });
   } catch (err) {
-    console.error("🔥 Eroare la adăugare sancțiune:", err);
+    console.error("Eroare la POST /api/sanctiuni:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ======================= POST /api/invoirems/:factionId =======================
 app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
@@ -721,6 +723,7 @@ app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
