@@ -558,47 +558,56 @@ app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
 // ======================= GET / POST INVOIRE =======================
 
 // GET invoire după Discord ID
-app.get("/api/invoire/:factionId/:discordId", async (req, res) => {
-    try {
-        const { factionId, discordId } = req.params;
-        const snap = await db.ref(`invoire/${factionId}`).once("value");
-
-        if (!snap.exists()) return res.json(null);
-
-        let found = null;
-        snap.forEach(child => {
-            const v = child.val();
-            if (v.DiscordId === discordId) found = { key: child.key, ...v };
-        });
-
-        res.json(found);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// POST adaugă invoire nouă
+// Adaugă invoire
 app.post("/api/invoire/:factionId", async (req, res) => {
     try {
         const { factionId } = req.params;
-        const { DiscordId, StartDate, EndDate } = req.body;
+        const { discordId, startDate, endDate } = req.body;
 
-        if (!DiscordId || !StartDate || !EndDate)
-            return res.status(400).json({ error: "Date incomplete" });
+        if (!discordId || !startDate || !endDate) {
+            return res.status(400).json({ error: "Date lipsă" });
+        }
 
-        const key = db.ref().child("invoire").push().key;
+        const key = db.ref().child(`invoire/${factionId}`).push().key;
 
-        await db.ref(`invoire/${factionId}/${key}`).set({
-            DiscordId, StartDate, EndDate
-        });
+        const invoire = {
+            DiscordId: discordId,
+            StartDate: startDate,
+            EndDate: endDate
+        };
 
-        res.status(201).json({ success: true, id: key });
+        await db.ref(`invoire/${factionId}/${key}`).set(invoire);
+
+        res.status(201).json({ success: true, key, invoire });
     } catch (err) {
-        console.error(err);
+        console.error("Eroare la POST invoire:", err);
         res.status(500).json({ error: err.message });
     }
 });
+
+// Obține invoire după DiscordId
+app.get("/api/invoire/:factionId/:discordId", async (req, res) => {
+    try {
+        const { factionId, discordId } = req.params;
+
+        const snap = await db.ref(`invoire/${factionId}`).once("value");
+        if (!snap.exists()) return res.json(null);
+
+        let result = null;
+        snap.forEach(child => {
+            const v = child.val();
+            if (v.DiscordId === discordId) {
+                result = { Key: child.key, ...v };
+            }
+        });
+
+        res.json(result);
+    } catch (err) {
+        console.error("Eroare la GET invoire:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // ======================= GET / POST INVOIRE MS =======================
 
@@ -647,5 +656,6 @@ app.post("/api/invoirems/:factionId", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
