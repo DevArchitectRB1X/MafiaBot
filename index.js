@@ -555,6 +555,97 @@ app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
   }
 });
 
+// ======================= GET / POST INVOIRE =======================
+
+// GET invoire după Discord ID
+app.get("/api/invoire/:factionId/:discordId", async (req, res) => {
+    try {
+        const { factionId, discordId } = req.params;
+        const snap = await db.ref(`invoire/${factionId}`).once("value");
+
+        if (!snap.exists()) return res.json(null);
+
+        let found = null;
+        snap.forEach(child => {
+            const v = child.val();
+            if (v.DiscordId === discordId) found = { key: child.key, ...v };
+        });
+
+        res.json(found);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST adaugă invoire nouă
+app.post("/api/invoire/:factionId", async (req, res) => {
+    try {
+        const { factionId } = req.params;
+        const { DiscordId, StartDate, EndDate } = req.body;
+
+        if (!DiscordId || !StartDate || !EndDate)
+            return res.status(400).json({ error: "Date incomplete" });
+
+        const key = db.ref().child("invoire").push().key;
+
+        await db.ref(`invoire/${factionId}/${key}`).set({
+            DiscordId, StartDate, EndDate
+        });
+
+        res.status(201).json({ success: true, id: key });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ======================= GET / POST INVOIRE MS =======================
+
+// GET invoire MS după Discord ID
+app.get("/api/invoirems/:factionId/:discordId", async (req, res) => {
+    try {
+        const { factionId, discordId } = req.params;
+        const snap = await db.ref(`invoirems/${factionId}`).once("value");
+
+        if (!snap.exists()) return res.json(null);
+
+        let found = null;
+        snap.forEach(child => {
+            const v = child.val();
+            if (v.DiscordId === discordId) found = { key: child.key, ...v };
+        });
+
+        res.json(found);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST adaugă invoire MS
+app.post("/api/invoirems/:factionId", async (req, res) => {
+    try {
+        const { factionId } = req.params;
+        const { DiscordId, StartDate, EndDate } = req.body;
+
+        if (!DiscordId || !StartDate || !EndDate)
+            return res.status(400).json({ error: "Date incomplete" });
+
+        const key = db.ref().child("invoirems").push().key;
+
+        await db.ref(`invoirems/${factionId}/${key}`).set({
+            DiscordId, StartDate, EndDate
+        });
+
+        res.status(201).json({ success: true, id: key });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
