@@ -500,5 +500,61 @@ app.put("/api/config", authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ======================= SANCȚIUNI =======================
+
+// ✅ GET toate sancțiunile pentru o facțiune
+app.get("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+  try {
+    const { factionId } = req.params;
+
+    console.log("=== DEBUG GET SANCȚIUNI ===");
+    console.log("Facțiune primită:", factionId);
+
+    const snap = await db.ref(`sanctiuni/${factionId}`).once("value");
+    if (!snap.exists()) {
+      console.log("Nu există sancțiuni pentru:", factionId);
+      return res.json([]); // returnează gol, nu eroare
+    }
+
+    const data = snap.val();
+    console.log("Sancțiuni găsite:", Object.keys(data).length);
+    res.json(data);
+  } catch (err) {
+    console.error("Eroare la GET sancțiuni:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ POST — adaugă o sancțiune nouă pentru o facțiune
+app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+  try {
+    const { factionId } = req.params;
+    const { Id, Tip, Motiv, Valoare } = req.body;
+
+    if (!Id || !Tip) {
+      return res.status(400).json({ error: "Lipsește Id sau Tip în corpul cererii" });
+    }
+
+    const newKey = db.ref(`sanctiuni/${factionId}`).push().key;
+    const data = {
+      Id,
+      Tip,
+      Motiv: Motiv || "-",
+      Valoare: Valoare || 0,
+      AddedAt: new Date().toISOString(),
+      AddedBy: req.user?.username || "unknown"
+    };
+
+    await db.ref(`sanctiuni/${factionId}/${newKey}`).set(data);
+    console.log(`✅ Sancțiune adăugată pentru ${factionId}:`, data);
+
+    res.status(201).json({ success: true, id: newKey, data });
+  } catch (err) {
+    console.error("Eroare la POST sancțiuni:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
