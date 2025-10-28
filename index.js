@@ -654,8 +654,64 @@ app.post("/api/invoirems/:factionId", async (req, res) => {
     }
 });
 
+// ======================= POST /api/sanctiuni/:factionId =======================
+app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+  try {
+    const { factionId } = req.params;
+    const { Id, Tip, Motiv, Valoare } = req.body;
+
+    if (!Id || !Tip || !Motiv) {
+      return res.status(400).json({ error: "Date lipsă" });
+    }
+
+    const data = {
+      IdDiscord: Id,
+      Tip,
+      Motiv,
+      Valoare: Valoare || 0,
+      Data: new Date().toISOString()
+    };
+
+    const key = db.ref().child("sanctiuni").push().key;
+    await db.ref(`sanctiuni/${factionId}/${key}`).set(data);
+
+    res.status(201).json({ success: true, id: key });
+  } catch (err) {
+    console.error("Eroare la adăugare sancțiune:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ======================= POST /api/invoirems/:factionId =======================
+app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
+  try {
+    const { factionId } = req.params;
+    const { discordId, startDate, endDate } = req.body;
+
+    if (!discordId || !startDate || !endDate) {
+      return res.status(400).json({ error: "Date lipsă" });
+    }
+
+    const data = {
+      IdDiscord: discordId,
+      StartDate: startDate,
+      EndDate: endDate,
+    };
+
+    const key = db.ref().child("invoirems").push().key;
+    await db.ref(`invoirems/${factionId}/${key}`).set(data);
+
+    res.status(201).json({ success: true, id: key });
+  } catch (err) {
+    console.error("Eroare la adăugare învoire MS:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
