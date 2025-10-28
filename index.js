@@ -658,30 +658,34 @@ app.post("/api/invoirems/:factionId", async (req, res) => {
 app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
   try {
     const { factionId } = req.params;
-    const { Id, Tip, Motiv, Valoare } = req.body;
+    const { discordId, tip, motiv, valoare } = req.body;
 
-    if (!Id || !Tip || !Motiv) {
+    // verificăm că există datele
+    if (!discordId || !tip || !motiv) {
+      console.log("❌ Lipsă date sancțiune:", req.body);
       return res.status(400).json({ error: "Date lipsă" });
     }
 
+    // Structura finală în Firebase
     const data = {
-      IdDiscord: Id,
-      Tip,
-      Motiv,
-      Valoare: Valoare || 0,
-      Data: new Date().toISOString()
+      IdDiscord: discordId,
+      Tip: tip,
+      Motiv: motiv,
+      Valoare: valoare || 0,
+      Data: new Date().toISOString(),
     };
 
+    // push cu cheie automată
     const key = db.ref().child("sanctiuni").push().key;
     await db.ref(`sanctiuni/${factionId}/${key}`).set(data);
 
+    console.log(`✅ Sancțiune adăugată pentru ${discordId} în ${factionId}`);
     res.status(201).json({ success: true, id: key });
   } catch (err) {
-    console.error("Eroare la adăugare sancțiune:", err);
+    console.error("🔥 Eroare la adăugare sancțiune:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ======================= POST /api/invoirems/:factionId =======================
 app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
@@ -689,28 +693,35 @@ app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
     const { factionId } = req.params;
     const { discordId, startDate, endDate } = req.body;
 
+    // Verificăm că toate câmpurile există
     if (!discordId || !startDate || !endDate) {
+      console.log("❌ Lipsă date invoirems:", req.body);
       return res.status(400).json({ error: "Date lipsă" });
     }
 
+    // Datele salvate corect
     const data = {
-      IdDiscord: discordId,
+      IdDiscord: discordId, // fixăm numele câmpului
       StartDate: startDate,
       EndDate: endDate,
     };
 
+    // Cream o cheie nouă
     const key = db.ref().child("invoirems").push().key;
     await db.ref(`invoirems/${factionId}/${key}`).set(data);
 
+    console.log(`✅ Învoire MS adăugată pentru ${discordId} în ${factionId}`);
     res.status(201).json({ success: true, id: key });
   } catch (err) {
-    console.error("Eroare la adăugare învoire MS:", err);
+    console.error("🔥 Eroare la adăugare învoire MS:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 
+
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
