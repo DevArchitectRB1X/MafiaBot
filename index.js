@@ -525,32 +525,6 @@ app.get("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ POST — adaugă o sancțiune nouă pentru o facțiune
-app.post("/api/sanctiuni/:factionId", async (req, res) => {
-  try {
-    const { factionId } = req.params;
-    const { IdDiscord, Tip, Motiv, Valoare = 0 } = req.body;
-
-    if (!IdDiscord || !Tip)
-      return res.status(400).json({ error: "Lipsește IdDiscord sau Tip în corpul cererii" });
-
-    const key = db.ref().child(`sanctiuni/${factionId}`).push().key;
-
-    await db.ref(`sanctiuni/${factionId}/${key}`).set({
-      IdDiscord,
-      Tip,
-      Motiv: Motiv || "-",
-      Valoare: Valoare || 0,
-      Data: new Date().toISOString()
-    });
-
-    res.json({ success: true, key });
-  } catch (err) {
-    console.error("Eroare la adăugare sancțiune:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 
 // ======================= GET / POST INVOIRE =======================
 
@@ -623,28 +597,6 @@ app.get("/api/invoirems/:factionId/:discordId", async (req, res) => {
         });
 
         res.json(found);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// POST adaugă invoire MS
-app.post("/api/invoirems/:factionId", async (req, res) => {
-    try {
-        const { factionId } = req.params;
-        const { DiscordId, StartDate, EndDate } = req.body;
-
-        if (!DiscordId || !StartDate || !EndDate)
-            return res.status(400).json({ error: "Date incomplete" });
-
-        const key = db.ref().child("invoirems").push().key;
-
-        await db.ref(`invoirems/${factionId}/${key}`).set({
-            DiscordId, StartDate, EndDate
-        });
-
-        res.status(201).json({ success: true, id: key });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
@@ -726,6 +678,7 @@ app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
