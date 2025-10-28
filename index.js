@@ -652,38 +652,44 @@ app.post("/api/invoirems/:factionId", async (req, res) => {
 });
 
 // ======================= POST /api/sanctiuni/:factionId =======================
-app.post("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+// ======================= POST SANCTIUNE =======================
+app.post("/api/sanctiuni/:factionId", async (req, res) => {
   try {
     const { factionId } = req.params;
     const { IdDiscord, Tip, Motiv, Valoare = 0 } = req.body;
 
     console.log("=== DEBUG SANCTIUNE ===");
-    console.log("Factiune:", factionId);
-    console.log("Body primit:", req.body);
+    console.log("Faction ID:", factionId);
+    console.log("IdDiscord primit:", IdDiscord);
+    console.log("Tip:", Tip);
+    console.log("Motiv:", Motiv);
+    console.log("Valoare:", Valoare);
 
-    if (!IdDiscord || !Tip || !Motiv) {
-      return res.status(400).json({ error: "Lipsesc date obligatorii" });
-    }
+    if (!IdDiscord || !Tip)
+      return res.status(400).json({ error: "Lipsește IdDiscord sau Tip în corpul cererii" });
 
-    const key = db.ref().child("sanctiuni").push().key;
+    // 🔑 Generăm o cheie unică pentru sancțiune
+    const key = db.ref().child(`sanctiuni/${factionId}`).push().key;
 
-    const sanctiune = {
-      IdDiscord,
+    // ✅ Aici punem direct IdDiscord din body, nu key-ul
+    const data = {
+      IdDiscord,         // corect
       Tip,
-      Motiv,
-      Valoare,
-      Data: new Date().toISOString(),
-      FactionId: factionId
+      Motiv: Motiv || "-",
+      Valoare: Valoare || 0,
+      Data: new Date().toISOString()
     };
 
-    await db.ref(`sanctiuni/${factionId}/${key}`).set(sanctiune);
+    await db.ref(`sanctiuni/${factionId}/${key}`).set(data);
 
-    res.status(201).json({ success: true, id: key, data: sanctiune });
+    console.log("Sancțiune adăugată corect pentru", IdDiscord);
+    res.json({ success: true, key });
   } catch (err) {
-    console.error("Eroare la POST /api/sanctiuni:", err);
+    console.error("❌ Eroare la adăugare sancțiune:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 // ======================= POST /api/invoirems/:factionId =======================
@@ -720,6 +726,7 @@ app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
