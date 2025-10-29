@@ -96,6 +96,20 @@ function createRefreshToken() {
     return crypto.randomBytes(40).toString('hex');
 }
 
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Lipsește tokenul" });
+  const token = authHeader.split(" ")[1];
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.user = payload;
+    next();
+  } catch {
+    return res.status(403).json({ error: "Token invalid sau expirat" });
+  }
+}
+
+
 // ======================= UPDATE GENERIC =======================
 app.put("/api/:collection/:id", authMiddleware, async (req, res) => {
   try {
@@ -409,6 +423,7 @@ app.post("/api/invoirems/:factionId", verifyToken, async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
