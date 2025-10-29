@@ -455,18 +455,22 @@ app.get("/api/users/:username", authMiddleware, async (req, res) => {
   }
 });
 
+// ======================= GET VERSION (din DB) =======================
+app.get("/api/stuff/version", async (req, res) => {
+  try {
+    const snap = await db.ref("stuff/version").once("value");
+    if (!snap.exists()) {
+      return res.status(404).json({ error: "Versiune inexistentă" });
+    }
+
+    res.json({
+      version: snap.val(),
+      fetchedAt: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
