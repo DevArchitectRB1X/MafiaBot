@@ -457,7 +457,7 @@ app.get("/api/users/:username", authMiddleware, async (req, res) => {
 
 app.get("/api/stuff/version", async (req, res) => {
   try {
-    const snap = await db.ref("stuff/version").once("value");
+    const snap = await db.ref("stuff/Version").once("value");
     if (!snap.exists()) return res.status(404).send("unknown");
 
     // Trimitem direct valoarea ca text simplu (nu JSON object)
@@ -470,5 +470,6 @@ app.get("/api/stuff/version", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
