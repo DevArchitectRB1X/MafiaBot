@@ -455,23 +455,20 @@ app.get("/api/users/:username", authMiddleware, async (req, res) => {
   }
 });
 
-// ======================= GET VERSION (din DB) =======================
 app.get("/api/stuff/version", async (req, res) => {
   try {
-    const snap = await db.ref("stuff/Version").once("value");
-    if (!snap.exists()) {
-      return res.status(404).json({ error: "Versiune inexistentă" });
-    }
+    const snap = await db.ref("stuff/version").once("value");
+    if (!snap.exists()) return res.status(404).send("unknown");
 
-    res.json({
-      version: snap.val(),
-      fetchedAt: new Date().toISOString()
-    });
+    // Trimitem direct valoarea ca text simplu (nu JSON object)
+    res.type("text/plain").send(snap.val());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Eroare la /api/stuff/version:", err);
+    res.status(500).send("error");
   }
 });
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
