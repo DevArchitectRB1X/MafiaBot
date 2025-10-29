@@ -421,8 +421,38 @@ app.post("/api/invoirems/:factionId", verifyToken, async (req, res) => {
   }
 });
 
+app.get("/api/users", authMiddleware, async (req, res) => {
+  try {
+    const snapshot = await db.ref("users").once("value");
+    if (!snapshot.exists()) return res.json([]);
+    const users = [];
+    snapshot.forEach(child => {
+      users.push({ id: child.key, ...child.val() });
+    });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get("/api/users/:username", authMiddleware, async (req, res) => {
+  try {
+    const { username } = req.params;
+    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+    if (!snap.exists()) return res.status(404).json({ error: "User inexistent" });
+
+    let user = null;
+    snap.forEach(child => (user = { id: child.key, ...child.val() }));
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
