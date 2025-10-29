@@ -468,8 +468,25 @@ app.get("/api/stuff/version", async (req, res) => {
   }
 });
 
+// ======================= MEMBRI FACTIUNE - GET =======================
+app.get("/api/membrifactiune/:factionId", async (req, res) => {
+  try {
+    const { factionId } = req.params;
+    const ref = db.ref(`membrifactiune/${factionId}`);
+    const snapshot = await ref.once("value");
+
+    if (!snapshot.exists()) 
+      return res.status(404).json({ error: "Nu există membri pentru această facțiune" });
+
+    res.json(snapshot.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
