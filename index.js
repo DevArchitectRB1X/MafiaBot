@@ -96,199 +96,163 @@ function createRefreshToken() {
     return crypto.randomBytes(40).toString('hex');
 }
 
-// ======================= UPDATE =======================
+// ======================= UPDATE GENERIC =======================
 app.put("/api/:collection/:id", authMiddleware, async (req, res) => {
-    try {
-        const { collection, id } = req.params;
-        const data = req.body;
-        if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: "Date lipsă" });
+  try {
+    const { collection, id } = req.params;
+    const data = req.body;
 
-        const ref = db.ref(`${collection}/${id}`);
-        const snapshot = await ref.once("value");
-        if (!snapshot.exists()) return res.status(404).json({ error: "Nu există acest jucător" });
+    if (!data || Object.keys(data).length === 0)
+      return res.status(400).json({ error: "Date lipsă" });
 
-        await ref.update(data);
-        res.json({ success: true, message: "Jucător actualizat cu succes" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    const ref = db.ref(`${collection}/${id}`);
+    const snapshot = await ref.once("value");
+    if (!snapshot.exists())
+      return res.status(404).json({ error: "Nu există acest jucător" });
+
+    // 👉 Doar update (nu set) — actualizare parțială
+    await ref.update(data);
+    res.json({ success: true, message: "Jucător actualizat cu succes" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
 // ======================= LOGIN =======================
 app.post("/api/login", async (req, res) => {
-    const { username, password } = req.body;
+  const { username, password } = req.body;
+  if (!username || !password)
+    return res.status(400).json({ error: "Missing credentials" });
+
+  try {
     const user = await getUserByUsername(username);
-    console.log("=== DEBUG LOGIN ===");
-    console.log("Primit username:", username);
-    console.log("Primit password:", password ? "(exista)" : "(lipsa)");
-    console.log("User gasit:", user.Username);
-console.log("Hash din DB:", user.PasswordHash);
-console.log("Password primit:", password);
+    if (!user) return res.status(401).json({ error: "Invalid credentials (user not found)" });
 
-    if (!username || !password) {
-        console.log("Lipsesc credentiale");
-        return res.status(400).json({ error: "Missing credentials" });
-    }
+    const valid = await bcrypt.compare(password, user.PasswordHash);
+    if (!valid) return res.status(401).json({ error: "Invalid credentials (wrong password)" });
 
-    try {
-        console.log("Rezultat getUserByUsername:", user ? "gasit" : "negasit");
+    const accessToken = createAccessToken({ username });
+    const refreshToken = createRefreshToken();
+    const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+    const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
 
-        if (!user) {
-            console.log("User negasit in baza de date!");
-            return res.status(401).json({ error: "Invalid credentials (user not found)" });
-        }
-
-        console.log("User gasit:", user.Username, "-> verific parola...");
-
-        const valid = await bcrypt.compare(password, user.PasswordHash);
-        console.log("Rezultat comparare parola:", valid);
-
-        if (!valid) {
-            console.log("Parola invalida pentru user:", username);
-            return res.status(401).json({ error: "Invalid credentials (wrong password)" });
-        }
-
-        // Tokens
-        const accessToken = createAccessToken({ username });
-        const refreshToken = createRefreshToken();
-        const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
-        const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-
-        await storeRefreshToken(username, tokenHash, expiresAt);
-        console.log("Token generat si stocat cu succes!");
-
-        res.json({ accessToken, refreshToken });
-    } catch (err) {
-        console.error("Eroare la bcrypt.compare:", err);
-  return res.status(500).json({ error: "Eroare interna la comparare parola" });
-    }
+    await storeRefreshToken(username, tokenHash, expiresAt);
+    res.json({ accessToken, refreshToken });
+  } catch (err) {
+    res.status(500).json({ error: "Eroare interna la comparare parola" });
+  }
 });
+
 
 // ======================= CREATE USER =======================
 app.post("/api/users", async (req, res) => {
-    try {
-        const { username, password, grad = 0, idFactiune } = req.body;
+  try {
+    const { username, password, grad = 0, idFactiune } = req.body;
 
-        if (!username || !password || !idFactiune) {
-            return res.status(400).json({ error: "Date incomplete" });
-        }
+    if (!username || !password || !idFactiune)
+      return res.status(400).json({ error: "Date incomplete" });
 
-        // 1️⃣ Verificăm dacă există deja user cu același username
-        const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
-        if (snap.exists()) return res.status(400).json({ error: "User deja existent" });
+    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+    if (snap.exists()) return res.status(400).json({ error: "User deja existent" });
 
-        // 2️⃣ Criptăm parola cu bcrypt (Node.js)
-        const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
+    const newUser = {
+      Username: username,
+      PasswordHash: passwordHash,
+      Grad: grad,
+      IdFactiune: idFactiune,
+      Blocat: 0,
+    };
 
-        // 3️⃣ Creăm obiectul user
-        const newUser = { 
-            Username: username,
-            PasswordHash: passwordHash,
-            Grad: grad,
-            IdFactiune: idFactiune,
-            Blocat: 0
-        };
-
-        // 4️⃣ Adăugăm în Firebase
-        const key = db.ref().child("users").push().key;
-        await db.ref(`users/${key}`).set(newUser);
-
-        res.status(201).json({ success: true, message: "User creat cu succes", id: key });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    const key = db.ref().child("users").push().key;
+    await db.ref(`users/${key}`).set(newUser);
+    res.status(201).json({ success: true, message: "User creat cu succes", id: key });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
 // ======================= REFRESH TOKEN =======================
 app.post("/api/refresh", async (req, res) => {
-    const { username, refreshToken } = req.body;
-    if (!username || !refreshToken) return res.status(400).json({ error: "Missing refresh token" });
+  const { username, refreshToken } = req.body;
+  if (!username || !refreshToken)
+    return res.status(400).json({ error: "Missing refresh token" });
 
-    await removeExpiredRefreshTokens(username);
+  await removeExpiredRefreshTokens(username);
+  const snap = await db.ref(`refreshTokens/${username}`).once("value");
+  if (!snap.exists()) return res.status(401).json({ error: "Invalid refresh token" });
 
-    const snap = await db.ref(`refreshTokens/${username}`).once("value");
-    if (!snap.exists()) return res.status(401).json({ error: "Invalid refresh token" });
+  let valid = false;
+  snap.forEach(child => {
+    const tokenHash = child.val().tokenHash;
+    if (tokenHash === crypto.createHash("sha256").update(refreshToken).digest("hex")) valid = true;
+  });
 
-    let valid = false;
-    snap.forEach(child => {
-        const tokenHash = child.val().tokenHash;
-        if (tokenHash === crypto.createHash("sha256").update(refreshToken).digest("hex")) valid = true;
-    });
+  if (!valid) return res.status(401).json({ error: "Invalid refresh token" });
 
-    if (!valid) return res.status(401).json({ error: "Invalid refresh token" });
-
-    const accessToken = createAccessToken({ username });
-    res.json({ accessToken });
+  const accessToken = createAccessToken({ username });
+  res.json({ accessToken });
 });
+
 
 // ======================= GET JUCĂTOR DUPĂ ID =======================
 app.get("/api/jucatoriacc/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
+    const ref = db.ref(`jucatoriacc/${id}`);
+    const snapshot = await ref.once("value");
 
-        console.log("=== DEBUG GET JUCATOR ===");
-        console.log("ID primit:", id);
-
-        const ref = db.ref(`jucatoriacc/${id}`);
-        const snapshot = await ref.once("value");
-
-        if (!snapshot.exists()) {
-            console.log("Jucătorul nu există:", id);
-            return res.json([]);
-        }
-
-        const data = snapshot.val();
-        console.log("Date jucător:", data);
-        res.json(data);
-    } catch (err) {
-        console.error("Eroare la GET jucator:", err);
-        res.status(500).json({ error: err.message });
-    }
+    if (!snapshot.exists()) return res.json([]);
+    res.json(snapshot.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET cod după ID
+
+// ======================= CODES =======================
 app.get("/api/Codes/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        const snap = await db.ref(`Codes/${id}`).once("value");
-        if (!snap.exists()) return res.status(404).json({ error: "Cod invalid" });
-        res.json(snap.val());
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const { id } = req.params;
+    const snap = await db.ref(`Codes/${id}`).once("value");
+    if (!snap.exists()) return res.status(404).json({ error: "Cod invalid" });
+    res.json(snap.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST cod (dacă vrei să creezi coduri noi)
 app.post("/api/Codes", async (req, res) => {
-    try {
-        const { Code, IdFactiune } = req.body;
-        if (!Code || !IdFactiune) return res.status(400).json({ error: "Date lipsa" });
+  try {
+    const { Code, IdFactiune } = req.body;
+    if (!Code || !IdFactiune)
+      return res.status(400).json({ error: "Date lipsa" });
 
-        const key = db.ref("Codes").push().key;
-        await db.ref(`Codes/${key}`).set({ Code, IdFactiune });
-        res.status(201).json({ success: true, id: key });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    const key = db.ref("Codes").push().key;
+    await db.ref(`Codes/${key}`).set({ Code, IdFactiune });
+    res.status(201).json({ success: true, id: key });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// DELETE cod după ID
 app.delete("/api/Codes/:id", async (req, res) => {
-    try {
-        const { id } = req.params;
-        await db.ref(`Codes/${id}`).remove();
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+    const { id } = req.params;
+    await db.ref(`Codes/${id}`).remove();
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
+
+// ======================= JUCĂTORI ACCEPTAȚI =======================
 app.post("/api/jucatoriacc/add", async (req, res) => {
   try {
     const { username, addedBy, notes, expiresInHours = 168 } = req.body;
-
     if (!username) return res.status(400).json({ error: "Username lipsă" });
 
     const now = Date.now();
@@ -300,384 +264,152 @@ app.post("/api/jucatoriacc/add", async (req, res) => {
       DateAdded: new Date(now).toISOString(),
       ExpiresAt: new Date(expiresAt).toISOString(),
       Status: "In teste",
-      Notes: notes || ""
+      Notes: notes || "",
     };
 
-    const ref = await db.ref("teste").push(data);
+    const ref = await db.ref("teste").push();
+    await ref.set(data);
     res.json({ success: true, id: ref.key, data });
   } catch (err) {
-    console.error("Eroare /api/jucatoriacc/add:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const data = req.body;
-        await db.ref(`jucatoriacc/${id}`).update(data);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
-// ======================= GET JUCATORI ACC DUPĂ CONTFACTIUNE =======================
-app.get("/api/jucatoriacc/:contFactiune", async (req, res) => {
-  const { contFactiune } = req.params;
-  console.log("=== DEBUG /api/jucatoriacc ===");
-  console.log("Factiune primita:", contFactiune);
-
   try {
-    const snap = await db.ref("jucatoriacc").once("value");
-    console.log("Exista snapshot:", snap.exists());
-
-    if (!snap.exists()) {
-      console.log("❌ Nu exista nodul jucatoriacc in Firebase");
-      return res.status(404).json({ error: "Nu exista jucatori" });
-    }
-
-    const results = [];
-    snap.forEach(child => {
-      const data = child.val();
-      console.log("-> Verific jucator:", child.key, " | contFactiune:", data.contFactiune);
-      if (data.contFactiune === contFactiune) {
-        results.push({ id: child.key, ...data });
-      }
-    });
-
-    console.log("Rezultate filtrate:", results.length);
-    res.json(results);
+    const { id } = req.params;
+    const data = req.body;
+    // 👉 Update, nu set
+    await db.ref(`jucatoriacc/${id}`).update(data);
+    res.json({ success: true });
   } catch (err) {
-    console.error("🔥 Eroare la /api/jucatoriacc:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 
-// ======================= GET MEMBRI FACTIUNE DUPĂ CONTFACTIUNE =======================
+// ======================= MEMBRI FACTIUNE =======================
 app.post("/api/membrifactiune", async (req, res) => {
-    try {
-        const { username, numeDiscord, rank, zile, contFactiune } = req.body;
+  try {
+    const { username, numeDiscord, rank, zile, contFactiune } = req.body;
+    if (!username || !numeDiscord || !contFactiune)
+      return res.status(400).json({ error: "Date incomplete" });
 
-        if (!username || !numeDiscord || !contFactiune) {
-            console.log("❌ Date lipsă:", req.body);
-            return res.status(400).json({ error: "Date incomplete", body: req.body });
-        }
+    const key = db.ref().child("membrifactiune").push().key;
+    const membru = {
+      username,
+      numeDiscord,
+      rank: rank || 1,
+      zile: zile || 0,
+      contFactiune,
+    };
 
-        const key = db.ref().child("membrifactiune").push().key;
-
-        const membru = {
-            username,
-            numeDiscord,
-            rank: rank || 1,
-            zile: zile || 0,
-            contFactiune
-        };
-
-        await db.ref(`membrifactiune/${contFactiune}/${key}`).set(membru);
-
-        res.status(201).json({ success: true, id: key });
-    } catch (err) {
-        console.error("Eroare la adăugare membru:", err);
-        res.status(500).json({ error: err.message });
-    }
+    // 👉 push().set()
+    await db.ref(`membrifactiune/${contFactiune}/${key}`).set(membru);
+    res.status(201).json({ success: true, id: key });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ======================= GET / POST GENERIC =======================
-app.get("/api/:collection/:id?", authMiddleware, async (req, res) => {
-    try {
-        const { collection, id } = req.params;
-        const ref = id ? db.ref(`${collection}/${id}`) : db.ref(collection);
-        const snapshot = await ref.once("value");
-        if (!snapshot.exists()) return res.status(404).json({ error: "Nu există date" });
-        res.json(snapshot.val());
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
-app.post("/api/:collection", authMiddleware, async (req, res) => {
-    try {
-        const { collection } = req.params;
-        const data = req.body;
-        if (!data || Object.keys(data).length === 0) return res.status(400).json({ error: "Date lipsă" });
-
-        const key = db.ref().child(collection).push().key;
-        await db.ref(`${collection}/${key}`).set(data);
-        res.status(201).json({ success: true, id: key });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ======================= UPDATE JUCĂTOR =======================
-// ======================= GET JUCATORI ACCEPTAȚI DUPĂ FACTIUNE =======================
-app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
-    try {
-        const { factionName } = req.params;
-
-        console.log("=== DEBUG GET JUCATORI ACCEPTAȚI ===");
-        console.log("Factiune primita:", factionName);
-
-        const ref = db.ref("jucatoriacc");
-        const snapshot = await ref.orderByChild("contFactiune").equalTo(factionName).once("value");
-
-        if (!snapshot.exists()) {
-            console.log("Nu s-au găsit jucători pentru facțiunea:", factionName);
-            return res.json([]);
-        }
-
-        const data = snapshot.val();
-        console.log("Jucători găsiți:", Object.keys(data).length);
-        res.json(data);
-    } catch (err) {
-        console.error("Eroare la GET jucatori acceptati:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ======================= GET JUCATORI ACCEPTAȚI DUPĂ FACTIUNE =======================
-app.get("/api/jucatoriacc/factiune/:factionName", async (req, res) => {
-    try {
-        const { factionName } = req.params;
-
-        console.log("=== DEBUG GET JUCATORI ACCEPTAȚI ===");
-        console.log("Factiune primita:", factionName);
-
-        const ref = db.ref("jucatoriacc");
-        const snapshot = await ref.orderByChild("contFactiune").equalTo(factionName).once("value");
-
-        if (!snapshot.exists()) {
-            console.log("Nu s-au găsit jucători pentru facțiunea:", factionName);
-            return res.json([]);
-        }
-
-        const data = snapshot.val();
-        console.log("Jucători găsiți:", Object.keys(data).length);
-        res.json(data);
-    } catch (err) {
-        console.error("Eroare la GET jucatori acceptati:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 🗑️ Șterge un jucător acceptat după key
-app.delete("/api/jucatoriacc/:key", async (req, res) => {
-    try {
-        const { key } = req.params;
-
-        if (!key) {
-            return res.status(400).json({ error: "Lipsește cheia jucătorului" });
-        }
-
-        // Șterge jucătorul din Firebase
-        await db.ref(`jucatoriacc/${key}`).remove();
-
-        console.log(`✅ Jucătorul cu key ${key} a fost șters din jucatoriacc.`);
-        res.json({ success: true, message: `Jucătorul ${key} a fost șters.` });
-    } catch (err) {
-        console.error("❌ Eroare la ștergerea jucătorului:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// GET config
+// ======================= CONFIG =======================
 app.get("/api/config", authMiddleware, async (req, res) => {
   try {
     const snap = await db.ref("config").once("value");
     res.json(snap.exists() ? snap.val() : {});
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// PUT update config
 app.put("/api/config", authMiddleware, async (req, res) => {
   try {
     const data = req.body;
+    // 👉 set() — rescrie complet config-ul
     await db.ref("config").set(data);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 // ======================= SANCȚIUNI =======================
-
-// ✅ GET toate sancțiunile pentru o facțiune
-app.get("/api/sanctiuni/:factionId", authMiddleware, async (req, res) => {
+app.post("/api/sanctiuni/:factionId", verifyToken, async (req, res) => {
   try {
-    const { factionId } = req.params;
-
-    console.log("=== DEBUG GET SANCȚIUNI ===");
-    console.log("Facțiune primită:", factionId);
-
-    const snap = await db.ref(`sanctiuni/${factionId}`).once("value");
-    if (!snap.exists()) {
-      console.log("Nu există sancțiuni pentru:", factionId);
-      return res.json([]); // returnează gol, nu eroare
-    }
-
-    const data = snap.val();
-    console.log("Sancțiuni găsite:", Object.keys(data).length);
-    res.json(data);
-  } catch (err) {
-    console.error("Eroare la GET sancțiuni:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-
-// ======================= GET / POST INVOIRE =======================
-
-// GET invoire după Discord ID
-// Adaugă invoire
-app.post("/api/invoire/:factionId", async (req, res) => {
-    try {
-        const { factionId } = req.params;
-        const { discordId, startDate, endDate } = req.body;
-
-        if (!discordId || !startDate || !endDate) {
-            return res.status(400).json({ error: "Date lipsă" });
-        }
-
-        const key = db.ref().child(`invoire/${factionId}`).push().key;
-
-        const invoire = {
-            DiscordId: discordId,
-            StartDate: startDate,
-            EndDate: endDate
-        };
-
-        await db.ref(`invoire/${factionId}/${key}`).set(invoire);
-
-        res.status(201).json({ success: true, key, invoire });
-    } catch (err) {
-        console.error("Eroare la POST invoire:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Obține invoire după DiscordId
-app.get("/api/invoire/:factionId/:discordId", async (req, res) => {
-    try {
-        const { factionId, discordId } = req.params;
-
-        const snap = await db.ref(`invoire/${factionId}`).once("value");
-        if (!snap.exists()) return res.json(null);
-
-        let result = null;
-        snap.forEach(child => {
-            const v = child.val();
-            if (v.DiscordId === discordId) {
-                result = { Key: child.key, ...v };
-            }
-        });
-
-        res.json(result);
-    } catch (err) {
-        console.error("Eroare la GET invoire:", err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
-// ======================= GET / POST INVOIRE MS =======================
-
-// GET invoire MS după Discord ID
-app.get("/api/invoirems/:factionId/:discordId", async (req, res) => {
-    try {
-        const { factionId, discordId } = req.params;
-        const snap = await db.ref(`invoirems/${factionId}`).once("value");
-
-        if (!snap.exists()) return res.json(null);
-
-        let found = null;
-        snap.forEach(child => {
-            const v = child.val();
-            if (v.DiscordId === discordId) found = { key: child.key, ...v };
-        });
-
-        res.json(found);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ======================= POST /api/sanctiuni/:factionId =======================
-// ======================= POST SANCTIUNE =======================
-app.post("/api/sanctiuni/:factionId", async (req, res) => {
-  try {
-    const { factionId } = req.params;
     const { IdDiscord, Tip, Motiv, Valoare = 0 } = req.body;
-
-    console.log("=== DEBUG SANCTIUNE ===");
-    console.log("Faction ID:", factionId);
-    console.log("IdDiscord primit:", IdDiscord);
-    console.log("Tip:", Tip);
-    console.log("Motiv:", Motiv);
-    console.log("Valoare:", Valoare);
+    const { factionId } = req.params;
 
     if (!IdDiscord || !Tip)
-      return res.status(400).json({ error: "Lipsește IdDiscord sau Tip în corpul cererii" });
+      return res.status(400).json({ error: "Lipsește IdDiscord sau Tip" });
 
-    // 🔑 Generăm o cheie unică pentru sancțiune
-    const key = db.ref().child(`sanctiuni/${factionId}`).push().key;
-
-    // ✅ Aici punem direct IdDiscord din body, nu key-ul
     const data = {
-      IdDiscord,         // corect
+      IdDiscord,
       Tip,
-      Motiv: Motiv || "-",
-      Valoare: Valoare || 0,
-      Data: new Date().toISOString()
+      Motiv,
+      Valoare,
+      Data: new Date().toISOString(),
     };
 
-    await db.ref(`sanctiuni/${factionId}/${key}`).set(data);
+    // 👉 set() — fiecare jucător are propriul ID
+    await db.ref(`sanctiuni/${factionId}/${IdDiscord}`).set(data);
 
-    console.log("Sancțiune adăugată corect pentru", IdDiscord);
-    res.json({ success: true, key });
+    res.json({ success: true, id: IdDiscord });
   } catch (err) {
-    console.error("❌ Eroare la adăugare sancțiune:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Eroare server" });
   }
 });
 
 
-
-// ======================= POST /api/invoirems/:factionId =======================
-app.post("/api/invoirems/:factionId", authMiddleware, async (req, res) => {
+// ======================= INVOIRE =======================
+app.post("/api/invoire/:factionId", verifyToken, async (req, res) => {
   try {
-    const { factionId } = req.params;
     const { discordId, startDate, endDate } = req.body;
+    const { factionId } = req.params;
 
-    // Verificăm că toate câmpurile există
-    if (!discordId || !startDate || !endDate) {
-      console.log("❌ Lipsă date invoirems:", req.body);
-      return res.status(400).json({ error: "Date lipsă" });
-    }
+    if (!discordId || !startDate || !endDate)
+      return res.status(400).json({ error: "Date invalide" });
 
-    // Datele salvate corect
-    const data = {
-      IdDiscord: discordId, // fixăm numele câmpului
+    // 👉 set() — doar o învoire activă per jucător
+    await db.ref(`invoire/${factionId}/${discordId}`).set({
+      IdDiscord: discordId,
       StartDate: startDate,
       EndDate: endDate,
-    };
+    });
 
-    // Cream o cheie nouă
-    const key = db.ref().child("invoirems").push().key;
-    await db.ref(`invoirems/${factionId}/${key}`).set(data);
-
-    console.log(`✅ Învoire MS adăugată pentru ${discordId} în ${factionId}`);
-    res.status(201).json({ success: true, id: key });
+    res.json({ success: true, id: discordId });
   } catch (err) {
-    console.error("🔥 Eroare la adăugare învoire MS:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Eroare server" });
   }
 });
 
+
+// ======================= INVOIRE MS =======================
+app.post("/api/invoirems/:factionId", verifyToken, async (req, res) => {
+  try {
+    const { discordId, startDate, endDate } = req.body;
+    const { factionId } = req.params;
+
+    if (!discordId || !startDate || !endDate)
+      return res.status(400).json({ error: "Date invalide" });
+
+    // 👉 set() — o singură învoire MS per jucător
+    await db.ref(`invoirems/${factionId}/${discordId}`).set({
+      IdDiscord: discordId,
+      StartDate: startDate,
+      EndDate: endDate,
+    });
+
+    res.json({ success: true, id: discordId });
+  } catch (err) {
+    res.status(500).json({ error: "Eroare server" });
+  }
+});
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
