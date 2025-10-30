@@ -550,8 +550,8 @@ app.post("/api/jucatoriacc", async (req, res) => {
       return res.status(400).json({ error: "Lipsesc date obligatorii" });
     }
 
-    // 🔹 Creează un nou ID automat
-    const ref = db.ref("jucatoriacc").push();
+    // 🔹 Creează sub cheie = username
+    const ref = db.ref(`jucatoriacc/${username}`);
 
     await ref.set({
       username,
@@ -565,39 +565,38 @@ app.post("/api/jucatoriacc", async (req, res) => {
       createdAt: new Date().toISOString(),
     });
 
-    res.json({ success: true, id: ref.key });
+    res.json({ success: true, id: username });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+
 // ✅ Ștergere jucător din jucatoriacc
-app.delete("/api/jucatoriacc/:key", async (req, res) => {
+app.delete("/api/jucatoriacc/:username", async (req, res) => {
   try {
-    const { key } = req.params;
+    const { username } = req.params;
+    const ref = db.ref(`jucatoriacc/${username}`);
 
-    if (!key) return res.status(400).json({ error: "Lipsește cheia jucătorului" });
-
-    const ref = db.ref(`jucatoriacc/${key}`);
-    const snapshot = await ref.once("value");
-
-    if (!snapshot.exists()) {
+    const snap = await ref.once("value");
+    if (!snap.exists()) {
       return res.status(404).json({ error: "Jucătorul nu există în baza de date." });
     }
 
     await ref.remove();
-    res.json({ success: true, message: `Jucătorul ${key} a fost șters.` });
+    res.json({ success: true, message: `Jucătorul ${username} a fost șters.` });
   } catch (err) {
-    console.error("Eroare DELETE /api/jucatoriacc/:key:", err);
+    console.error("Eroare DELETE /api/jucatoriacc/:username:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.put("/api/jucatoriacc/:key", async (req, res) => {
+
+app.put("/api/jucatoriacc/:username", async (req, res) => {
   try {
-    const { key } = req.params;
+    const { username } = req.params;
     const data = req.body;
-    const ref = db.ref(`jucatoriacc/${key}`);
+    const ref = db.ref(`jucatoriacc/${username}`);
 
     const snap = await ref.once("value");
     if (!snap.exists()) {
@@ -607,13 +606,15 @@ app.put("/api/jucatoriacc/:key", async (req, res) => {
     await ref.update(data);
     res.json({ success: true, updated: data });
   } catch (err) {
-    console.error("Eroare PUT /api/jucatoriacc/:key", err);
+    console.error("Eroare PUT /api/jucatoriacc/:username", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 
+
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
