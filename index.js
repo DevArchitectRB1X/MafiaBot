@@ -526,8 +526,25 @@ app.post("/api/absenti/:factionId", async (req, res) => {
   }
 });
 
+// Șterge membru din facțiune
+app.delete("/api/membrifactiune/:contFactiune/:discordId", async (req, res) => {
+    try {
+        const { contFactiune, discordId } = req.params;
+        const ref = db.ref(`membrifactiune/${contFactiune}/${discordId}`);
+        const snapshot = await ref.once("value");
+
+        if (!snapshot.exists()) return res.status(404).json({ error: "Membru nu există" });
+
+        await ref.remove();
+        res.json({ success: true, message: "Membru șters cu succes" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
