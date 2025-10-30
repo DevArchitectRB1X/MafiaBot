@@ -502,8 +502,33 @@ app.get("/api/jucatoriacc", async (req, res) => {
   }
 });
 
+// ======================= ABSENȚI =======================
+app.post("/api/absenti/:factionId", async (req, res) => {
+  try {
+    const factionId = req.params.factionId;
+    const { Id, Nume, DataStart, DataExpira } = req.body;
+
+    if (!Id || !Nume || !DataStart || !DataExpira)
+      return res.status(400).json({ error: "Câmpuri lipsă în corpul cererii." });
+
+    const ref = db.ref(`absenti/${factionId}/${Id}`);
+    await ref.set({
+      Id,
+      Nume,
+      DataStart,
+      DataExpira
+    });
+
+    res.status(200).json({ message: `Absent adăugat cu succes pentru ${Nume} (${Id}) în ${factionId}` });
+  } catch (err) {
+    console.error("Eroare la adăugare absent:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
