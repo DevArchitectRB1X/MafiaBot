@@ -303,7 +303,6 @@ app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
 
 
 // ======================= MEMBRI FACTIUNE =======================
-// ======================= MEMBRI FACTIUNE =======================
 app.post("/api/membrifactiune", async (req, res) => {
   try {
     const { username, IdDiscord, rank, zile, contFactiune } = req.body;
@@ -311,23 +310,24 @@ app.post("/api/membrifactiune", async (req, res) => {
     if (!username || !IdDiscord || !contFactiune)
       return res.status(400).json({ error: "Date incomplete" });
 
-    const key = db.ref().child("membrifactiune").push().key;
     const membru = {
       username,
       IdDiscord,
       rank: rank || 1,
       zile: zile || 0,
       contFactiune,
-      DataAdaugare: new Date().toISOString()
+      DataAdaugare: new Date().toISOString(),
     };
 
+    // 🔹 în loc de push().key, folosim direct IdDiscord ca și cheie în Firebase
     await db.ref(`membrifactiune/${contFactiune}/${IdDiscord}`).set(membru);
+
     res.status(201).json({ success: true, id: IdDiscord });
   } catch (err) {
+    console.error("Eroare la adăugare membru:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ======================= CONFIG =======================
 app.get("/api/config", authMiddleware, async (req, res) => {
@@ -488,6 +488,7 @@ app.get("/api/membrifactiune/:factionId", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
