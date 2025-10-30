@@ -542,8 +542,38 @@ app.delete("/api/membrifactiune/:contFactiune/:discordId", async (req, res) => {
     }
 });
 
+app.post("/api/jucatoriacc", async (req, res) => {
+  try {
+    const { username, numeDiscord, addedBy, contFactiune, expiresIn, status, punctaj, motiv } = req.body;
+
+    if (!username || !numeDiscord || !contFactiune) {
+      return res.status(400).json({ error: "Lipsesc date obligatorii" });
+    }
+
+    // 🔹 Creează un nou ID automat
+    const ref = db.ref("jucatoriacc").push();
+
+    await ref.set({
+      username,
+      numeDiscord,
+      addedBy,
+      contFactiune,
+      expiresIn,
+      status,
+      punctaj,
+      motiv,
+      createdAt: new Date().toISOString(),
+    });
+
+    res.json({ success: true, id: ref.key });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
