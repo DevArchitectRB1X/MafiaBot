@@ -571,8 +571,59 @@ app.post("/api/jucatoriacc", async (req, res) => {
   }
 });
 
+// ✅ Ștergere jucător din jucatoriacc
+app.delete("/api/jucatoriacc/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    if (!key) return res.status(400).json({ error: "Lipsește cheia jucătorului" });
+
+    const ref = db.ref(`jucatoriacc/${key}`);
+    const snapshot = await ref.once("value");
+
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: "Jucătorul nu există în baza de date." });
+    }
+
+    await ref.remove();
+    res.json({ success: true, message: `Jucătorul ${key} a fost șters.` });
+  } catch (err) {
+    console.error("Eroare DELETE /api/jucatoriacc/:key:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+// ✅ Update jucător (status/punctaj/motiv)
+app.put("/api/jucatoriacc/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { status, punctaj, motiv } = req.body;
+
+    if (!key) return res.status(400).json({ error: "Lipsește cheia jucătorului" });
+
+    const ref = db.ref(`jucatoriacc/${key}`);
+
+    const snapshot = await ref.once("value");
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: "Jucătorul nu există" });
+    }
+
+    await ref.update({
+      status,
+      punctaj,
+      motiv,
+      updatedAt: new Date().toISOString(),
+    });
+
+    res.json({ success: true, message: `Jucătorul ${key} a fost actualizat.` });
+  } catch (err) {
+    console.error("Eroare PUT /api/jucatoriacc/:key:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
