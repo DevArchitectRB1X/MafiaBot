@@ -592,37 +592,29 @@ app.delete("/api/jucatoriacc/:key", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// ✅ Update jucător (status/punctaj/motiv)
+
 app.put("/api/jucatoriacc/:key", async (req, res) => {
   try {
     const { key } = req.params;
-    const { status, punctaj, motiv } = req.body;
-
-    if (!key) return res.status(400).json({ error: "Lipsește cheia jucătorului" });
-
+    const data = req.body;
     const ref = db.ref(`jucatoriacc/${key}`);
 
-    const snapshot = await ref.once("value");
-    if (!snapshot.exists()) {
+    const snap = await ref.once("value");
+    if (!snap.exists()) {
       return res.status(404).json({ error: "Jucătorul nu există" });
     }
 
-    await ref.update({
-      status,
-      punctaj,
-      motiv,
-      updatedAt: new Date().toISOString(),
-    });
-
-    res.json({ success: true, message: `Jucătorul ${key} a fost actualizat.` });
+    await ref.update(data);
+    res.json({ success: true, updated: data });
   } catch (err) {
-    console.error("Eroare PUT /api/jucatoriacc/:key:", err);
+    console.error("Eroare PUT /api/jucatoriacc/:key", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
