@@ -303,24 +303,26 @@ app.put("/api/jucatoriacc/:id", authMiddleware, async (req, res) => {
 
 
 // ======================= MEMBRI FACTIUNE =======================
+// ======================= MEMBRI FACTIUNE =======================
 app.post("/api/membrifactiune", async (req, res) => {
   try {
-    const { username, numeDiscord, rank, zile, contFactiune } = req.body;
-    if (!username || !numeDiscord || !contFactiune)
+    const { username, IdDiscord, rank, zile, contFactiune } = req.body;
+
+    if (!username || !IdDiscord || !contFactiune)
       return res.status(400).json({ error: "Date incomplete" });
 
     const key = db.ref().child("membrifactiune").push().key;
     const membru = {
       username,
-      numeDiscord,
+      IdDiscord,
       rank: rank || 1,
       zile: zile || 0,
       contFactiune,
+      DataAdaugare: new Date().toISOString()
     };
 
-    // 👉 push().set()
-    await db.ref(`membrifactiune/${contFactiune}/${key}`).set(membru);
-    res.status(201).json({ success: true, id: key });
+    await db.ref(`membrifactiune/${contFactiune}/${IdDiscord}`).set(membru);
+    res.status(201).json({ success: true, id: IdDiscord });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -486,6 +488,7 @@ app.get("/api/membrifactiune/:factionId", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
