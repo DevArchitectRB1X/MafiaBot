@@ -486,8 +486,25 @@ app.get("/api/membrifactiune/:factionId", async (req, res) => {
   }
 });
 
+// ======================= JUCATORI ACC =======================
+app.get("/api/jucatoriacc", async (req, res) => {
+  try {
+    const snapshot = await db.ref("jucatoriacc").once("value");
+    const data = snapshot.val();
+
+    if (!data)
+      return res.status(404).json({ error: "Nu există jucători acc în baza de date." });
+
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Eroare la preluare jucatori acc:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
