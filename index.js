@@ -167,22 +167,72 @@ app.post("/api/users", async (req, res) => {
     if (!username || !password || !idFactiune)
       return res.status(400).json({ error: "Date incomplete" });
 
-    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
-    if (snap.exists()) return res.status(400).json({ error: "User deja existent" });
+    // 🔹 Verifică dacă userul există deja (după cheie = nume)
+    const ref = db.ref(`users/${username}`);
+    const snapshot = await ref.once("value");
+    if (snapshot.exists()) {
+      return res.status(400).json({ error: "User deja existent" });
+    }
 
+    // 🔹 Hash parola
     const passwordHash = await bcrypt.hash(password, 10);
+
+    // 🔹 Structura userului
     const newUser = {
       Username: username,
       PasswordHash: passwordHash,
       Grad: grad,
       IdFactiune: idFactiune,
       Blocat: 0,
+      CreatedAt: new Date().toISOString()
     };
 
-    const key = db.ref().child("users").push().key;
-    await db.ref(`users/${key}`).set(newUser);
-    res.status(201).json({ success: true, message: "User creat cu succes", id: key });
+    // 🔹 Salvează userul sub `users/{username}`
+    await db.ref(`users/${username}`).set(newUser);
+
+    res.status(201).json({
+      success: true,
+      message: "User creat cu succes",
+      id: username,
+    });
   } catch (err) {
+    console.error("Eroare POST /api/users:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Creează un user cu numele specificat în URL
+app.post("/api/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const { password, grad, discordId } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username și parola sunt obligatorii." });
+    }
+
+    // Verifică dacă există deja
+    const ref = db.ref(`users/${username}`);
+    const snap = await ref.once("value");
+
+    if (snap.exists()) {
+      return res.status(400).json({ error: "Acest utilizator există deja." });
+    }
+
+    // Salvează userul în DB
+    const data = {
+      username,
+      password,
+      grad: grad || 0,
+      discordId: discordId || "",
+      createdAt: new Date().toISOString(),
+    };
+
+    await ref.set(data);
+
+    res.json({ success: true, message: `Utilizatorul ${username} a fost creat.`, data });
+  } catch (err) {
+    console.error("Eroare POST /api/users/:username:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -660,6 +710,7 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
