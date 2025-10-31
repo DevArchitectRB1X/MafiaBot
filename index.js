@@ -241,6 +241,37 @@ app.get("/api/Codes/:code", async (req, res) => {
   }
 });
 
+// ✅ Creează un cod cu ID-ul exact specificat în URL
+app.post("/api/Codes/:code", async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { IdFactiune } = req.body;
+
+    if (!code) return res.status(400).json({ error: "Lipsește codul" });
+    if (!IdFactiune) return res.status(400).json({ error: "Lipsește ID-ul facțiunii" });
+
+    // Verifică dacă codul există deja
+    const ref = db.ref(`Codes/${code}`);
+    const snap = await ref.once("value");
+    if (snap.exists()) {
+      return res.status(400).json({ error: "Codul există deja în baza de date" });
+    }
+
+    const data = {
+      Code: code,
+      IdFactiune,
+      createdAt: new Date().toISOString(),
+    };
+
+    await ref.set(data);
+    res.json({ success: true, message: `Codul ${code} a fost adăugat cu succes`, data });
+  } catch (err) {
+    console.error("Eroare POST /api/codes/:code:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ✅ PUT (actualizare cod)
 app.put("/api/Codes/:code", async (req, res) => {
   try {
@@ -629,6 +660,7 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
