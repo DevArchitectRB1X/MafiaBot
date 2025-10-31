@@ -726,8 +726,68 @@ app.get("/api/users/factiune/:id", async (req, res) => {
   }
 });
 
+// ✅ Preluare toate sancțiunile
+app.get("/api/sanctiuni", async (req, res) => {
+  try {
+    const snapshot = await db.ref("sanctiuni").once("value");
+    const data = snapshot.val();
+    if (!data)
+      return res.status(404).json({ error: "Nu există sancțiuni în baza de date." });
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Eroare GET /api/sanctiuni:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Adăugare sancțiune
+app.post("/api/sanctiuni", async (req, res) => {
+  try {
+    const { nume, tip, dataAcordare, dataExpirare, rank, contFactiune } = req.body;
+
+    if (!nume || !tip || !contFactiune)
+      return res.status(400).json({ error: "Date incomplete pentru sancțiune" });
+
+    const ref = db.ref("sanctiuni").push();
+    await ref.set({
+      nume,
+      tip,
+      dataAcordare,
+      dataExpirare,
+      rank,
+      contFactiune,
+      createdAt: new Date().toISOString()
+    });
+
+    res.json({ success: true, id: ref.key });
+  } catch (err) {
+    console.error("Eroare POST /api/sanctiuni:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Ștergere sancțiune
+app.delete("/api/sanctiuni/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    if (!key) return res.status(400).json({ error: "Lipsește cheia sancțiunii" });
+
+    const ref = db.ref(`sanctiuni/${key}`);
+    const snap = await ref.once("value");
+    if (!snap.exists())
+      return res.status(404).json({ error: "Sancțiunea nu există" });
+
+    await ref.remove();
+    res.json({ success: true, message: `Sancțiunea ${key} a fost ștearsă.` });
+  } catch (err) {
+    console.error("Eroare DELETE /api/sanctiuni/:key:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
