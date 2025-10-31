@@ -715,9 +715,20 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
   }
 });
 
+app.get("/api/users/factiune/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const snapshot = await db.ref("users").orderByChild("IdFactiune").equalTo(id).once("value");
+    if (!snapshot.exists()) return res.status(404).json({ error: "Niciun utilizator găsit" });
+    res.json(snapshot.val());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
