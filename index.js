@@ -228,10 +228,10 @@ app.get("/api/jucatoriacc/:id", async (req, res) => {
 
 // ======================= CODES =======================
 // ✅ GET un cod
-app.get("/api/codes/:code", async (req, res) => {
+app.get("/api/Codes/:code", async (req, res) => {
   try {
     const { code } = req.params;
-    const ref = db.ref(`codes/${code}`);
+    const ref = db.ref(`Codes/${code}`);
     const snapshot = await ref.once("value");
 
     if (!snapshot.exists()) return res.status(404).json({ error: "Codul nu există" });
@@ -242,11 +242,11 @@ app.get("/api/codes/:code", async (req, res) => {
 });
 
 // ✅ PUT (actualizare cod)
-app.put("/api/codes/:code", async (req, res) => {
+app.put("/api/Codes/:code", async (req, res) => {
   try {
     const { code } = req.params;
     const data = req.body;
-    const ref = db.ref(`codes/${code}`);
+    const ref = db.ref(`Codes/${code}`);
 
     const snapshot = await ref.once("value");
     if (!snapshot.exists()) {
@@ -261,10 +261,10 @@ app.put("/api/codes/:code", async (req, res) => {
 });
 
 // ✅ DELETE (ștergere cod)
-app.delete("/api/codes/:code", async (req, res) => {
+app.delete("/api/Codes/:code", async (req, res) => {
   try {
     const { code } = req.params;
-    const ref = db.ref(`codes/${code}`);
+    const ref = db.ref(`Codes/${code}`);
 
     const snapshot = await ref.once("value");
     if (!snapshot.exists()) {
@@ -629,6 +629,7 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
