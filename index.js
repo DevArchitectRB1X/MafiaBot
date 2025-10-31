@@ -201,41 +201,49 @@ app.post("/api/users", async (req, res) => {
   }
 });
 
-// ✅ Creează un user cu numele specificat în URL
-app.post("/api/users/:username", async (req, res) => {
+// ✅ GET user după username
+app.get("/api/users/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    const { password, grad, discordId } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username și parola sunt obligatorii." });
-    }
-
-    // Verifică dacă există deja
     const ref = db.ref(`users/${username}`);
     const snap = await ref.once("value");
 
-    if (snap.exists()) {
-      return res.status(400).json({ error: "Acest utilizator există deja." });
-    }
-
-    // Salvează userul în DB
-    const data = {
-      username,
-      password,
-      grad: grad || 0,
-      discordId: discordId || "",
-      createdAt: new Date().toISOString(),
-    };
-
-    await ref.set(data);
-
-    res.json({ success: true, message: `Utilizatorul ${username} a fost creat.`, data });
+    if (!snap.exists()) return res.status(404).json({ error: "Userul nu există." });
+    res.json(snap.val());
   } catch (err) {
-    console.error("Eroare POST /api/users/:username:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+// ✅ PUT (update user)
+app.put("/api/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const data = req.body;
+
+    const ref = db.ref(`users/${username}`);
+    const snap = await ref.once("value");
+    if (!snap.exists()) return res.status(404).json({ error: "Userul nu există." });
+
+    await ref.update(data);
+    res.json({ success: true, updated: data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ DELETE user
+app.delete("/api/users/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+    const ref = db.ref(`users/${username}`);
+    await ref.remove();
+    res.json({ success: true, message: `Userul ${username} a fost șters.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 // ======================= REFRESH TOKEN =======================
@@ -710,6 +718,7 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
