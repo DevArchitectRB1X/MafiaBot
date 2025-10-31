@@ -227,41 +227,56 @@ app.get("/api/jucatoriacc/:id", async (req, res) => {
 
 
 // ======================= CODES =======================
-app.get("/api/Codes/:id", async (req, res) => {
+// ✅ GET un cod
+app.get("/api/codes/:code", async (req, res) => {
   try {
-    const { id } = req.params;
-    const snap = await db.ref(`Codes/${id}`).once("value");
-    if (!snap.exists()) return res.status(404).json({ error: "Cod invalid" });
-    res.json(snap.val());
+    const { code } = req.params;
+    const ref = db.ref(`codes/${code}`);
+    const snapshot = await ref.once("value");
+
+    if (!snapshot.exists()) return res.status(404).json({ error: "Codul nu există" });
+    res.json(snapshot.val());
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/Codes", async (req, res) => {
+// ✅ PUT (actualizare cod)
+app.put("/api/codes/:code", async (req, res) => {
   try {
-    const { Code, IdFactiune } = req.body;
-    if (!Code || !IdFactiune)
-      return res.status(400).json({ error: "Date lipsa" });
+    const { code } = req.params;
+    const data = req.body;
+    const ref = db.ref(`codes/${code}`);
 
-    const key = db.ref("Codes").push().key;
-    await db.ref(`Codes/${key}`).set({ Code, IdFactiune });
-    res.status(201).json({ success: true, id: key });
+    const snapshot = await ref.once("value");
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: "Codul nu există în baza de date." });
+    }
+
+    await ref.update(data);
+    res.json({ success: true, updated: data });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.delete("/api/Codes/:id", async (req, res) => {
+// ✅ DELETE (ștergere cod)
+app.delete("/api/codes/:code", async (req, res) => {
   try {
-    const { id } = req.params;
-    await db.ref(`Codes/${id}`).remove();
-    res.json({ success: true });
+    const { code } = req.params;
+    const ref = db.ref(`codes/${code}`);
+
+    const snapshot = await ref.once("value");
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: "Codul nu există" });
+    }
+
+    await ref.remove();
+    res.json({ success: true, message: `Codul ${code} a fost șters.` });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ======================= JUCĂTORI ACCEPTAȚI =======================
 app.post("/api/jucatoriacc/add", async (req, res) => {
@@ -614,6 +629,7 @@ app.put("/api/jucatoriacc/:username", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
