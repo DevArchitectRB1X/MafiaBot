@@ -680,20 +680,30 @@ app.post("/api/jucatoriacc", async (req, res) => {
 app.delete("/api/jucatoriacc/:username", async (req, res) => {
   try {
     const { username } = req.params;
-    const ref = db.ref(`jucatoriacc/${username}`);
 
-    const snap = await ref.once("value");
-    if (!snap.exists()) {
-      return res.status(404).json({ error: "Jucătorul nu există în baza de date." });
+    // 🔹 Caută în baza de date după username (nu key)
+    const snapshot = await db.ref("jucatoriacc")
+      .orderByChild("username")
+      .equalTo(username)
+      .once("value");
+
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: `Jucătorul ${username} nu există în baza de date.` });
     }
 
-    await ref.remove();
+    // 🔹 Ia cheia reală din Firebase
+    const key = Object.keys(snapshot.val())[0];
+
+    // 🔹 Șterge jucătorul după key-ul găsit
+    await db.ref(`jucatoriacc/${key}`).remove();
+
     res.json({ success: true, message: `Jucătorul ${username} a fost șters.` });
   } catch (err) {
     console.error("Eroare DELETE /api/jucatoriacc/:username:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 app.put("/api/jucatoriacc/:username", async (req, res) => {
@@ -787,6 +797,7 @@ app.delete("/api/sanctiuni/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
