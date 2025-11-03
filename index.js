@@ -134,27 +134,100 @@ app.put("/api/:collection/:id", authMiddleware, async (req, res) => {
 
 
 // ======================= LOGIN =======================
+// Importuri deja prezente: jwt, bcrypt, db, etc.
+// Threshold-uri configurabile:
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_PERMANENT = true; // true => Blocat = 1 (permanent). Daca vrei temporar, seteaza false si foloseste LockUntil timestamp.
+const TEMP_LOCK_MINUTES = 15; // folosit doar daca LOCK_PERMANENT = false
+
 app.post("/api/login", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password)
-    return res.status(400).json({ error: "Missing credentials" });
-
   try {
-    const user = await getUserByUsername(username);
-    if (!user) return res.status(401).json({ error: "Invalid credentials (user not found)" });
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ error: "Missing credentials" });
 
-    const valid = await bcrypt.compare(password, user.PasswordHash);
-    if (!valid) return res.status(401).json({ error: "Invalid credentials (wrong password)" });
+    // cautam user (cheie random)
+    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+    if (!snap.exists()) {
+      // Nu divulgam prea multe -> raspuns generic
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
 
-    const accessToken = createAccessToken({ username });
-    const refreshToken = createRefreshToken();
-    const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
+    const userKey = Object.keys(snap.val())[0];
+    const user = snap.val()[userKey];
+
+    // daca Blocat permanent
+    if (user.Blocat === 1) {
+      return res.status(403).json({ error: "Cont blocat permanent. Contactează admin." });
+    }
+
+    // daca exista LockUntil (temporar)
+    if (user.LockUntil && Number(user.LockUntil) > Date.now()) {
+      const minutesLeft = Math.ceil((Number(user.LockUntil) - Date.now()) / 60000);
+      return res.status(403).json({ error: `Cont blocat temporar. Încearcă peste ${minutesLeft} minute.` });
+    }
+
+    // verific parola
+    const match = await bcrypt.compare(password, user.PasswordHash);
+    if (!match) {
+      const currentFails = (user.FailedAttempts || 0) + 1;
+      const updates = { FailedAttempts: currentFails };
+
+      if (currentFails >= MAX_FAILED_ATTEMPTS) {
+        if (LOCK_PERMANENT) {
+          updates.FailedAttempts = 0;
+          updates.Blocat = 1; // blocare permanentă
+        } else {
+          updates.FailedAttempts = 0;
+          updates.LockUntil = Date.now() + TEMP_LOCK_MINUTES * 60 * 1000;
+        }
+      }
+
+      await db.ref(`users/${userKey}`).update(updates);
+
+      const attemptsLeft = Math.max(0, MAX_FAILED_ATTEMPTS - currentFails);
+      return res.status(401).json({
+        error: "Invalid credentials",
+        attemptsLeft
+      });
+    }
+
+    // login reușit -> resetam failed counters
+    await db.ref(`users/${userKey}`).update({ FailedAttempts: 0, LockUntil: 0 });
+
+    // generam token + refresh
+    const accessToken = jwt.sign({ username, grad: user.Grad, idFactiune: user.IdFactiune }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    const refreshToken = crypto.randomBytes(40).toString('hex');
     const tokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-
+    const expiresAt = Date.now() + REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000;
     await storeRefreshToken(username, tokenHash, expiresAt);
-    res.json({ accessToken, refreshToken });
+
+    return res.json({ accessToken, refreshToken });
   } catch (err) {
-    res.status(500).json({ error: "Eroare interna la comparare parola" });
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Eroare server" });
+  }
+});
+
+// admin unlock user
+app.post("/api/unlockUser/:username", authMiddleware, async (req, res) => {
+  try {
+    // verificăm dacă user-ul curent are privilegii (exemplu: grad >= 7)
+    const caller = req.user; // promitem că authMiddleware a pus payload-ul
+    if (!caller || (caller.grad ?? 0) < 7) {
+      return res.status(403).json({ error: "Nu ai permisiunea" });
+    }
+
+    const { username } = req.params;
+    const snap = await db.ref("users").orderByChild("Username").equalTo(username).once("value");
+    if (!snap.exists()) return res.status(404).json({ error: "Utilizator inexistent" });
+
+    const userKey = Object.keys(snap.val())[0];
+    await db.ref(`users/${userKey}`).update({ FailedAttempts: 0, LockUntil: 0, Blocat: 0 });
+
+    return res.json({ success: true, message: `${username} deblocat` });
+  } catch (err) {
+    console.error("unlockUser:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -797,6 +870,7 @@ app.delete("/api/sanctiuni/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
