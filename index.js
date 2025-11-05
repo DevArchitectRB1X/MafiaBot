@@ -208,6 +208,38 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Trimite loguri TOS/Privacy/IP/DeviceID
+app.post("/api/logs", async (req, res) => {
+    try {
+        const { ip_address, device_id, tos_accepted, privacy_accepted } = req.body;
+
+        if (!ip_address || !device_id || tos_accepted === undefined || privacy_accepted === undefined) {
+            return res.status(400).json({ error: "Date incomplete" });
+        }
+
+        // Optional: hash IP/deviceID dacă vrei anonimizare
+        // const ipHash = crypto.createHash("sha256").update(ip_address).digest("hex");
+        // const deviceHash = crypto.createHash("sha256").update(device_id).digest("hex");
+
+        const logEntry = {
+            ip_address,       // sau ipHash dacă vrei anonimizare
+            device_id,        // sau deviceHash
+            tos_accepted,
+            privacy_accepted,
+            created_at: Date.now()
+        };
+
+        // Salvare în Firebase Realtime Database
+        await db.ref("logs").push(logEntry);
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("Log error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // admin unlock user
 app.post("/api/unlockUser/:username", authMiddleware, async (req, res) => {
   try {
@@ -870,6 +902,7 @@ app.delete("/api/sanctiuni/:key", async (req, res) => {
 
 
 app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
+
 
 
 
